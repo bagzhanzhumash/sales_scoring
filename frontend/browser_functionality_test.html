@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontend Functionality Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-result {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .pass { background: #d4edda; color: #155724; border-left: 4px solid #28a745; }
+        .fail { background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545; }
+        .info { background: #d1ecf1; color: #0c5460; border-left: 4px solid #17a2b8; }
+        .loading { background: #fff3cd; color: #856404; border-left: 4px solid #ffc107; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        .summary {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .api-response {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .page-links {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .page-link {
+            display: block;
+            padding: 15px;
+            background: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            text-align: center;
+            transition: background 0.2s;
+        }
+        .page-link:hover {
+            background: #0056b3;
+            color: white;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Frontend-Backend Integration Test</h1>
+    <p>This page tests all frontend functionality and API connections in real-time.</p>
+
+    <div class="test-container">
+        <h2>🔗 Quick Page Navigation</h2>
+        <div class="page-links">
+            <a href="http://localhost:3000/" class="page-link" target="_blank">Dashboard</a>
+            <a href="http://localhost:3000/projects" class="page-link" target="_blank">Projects</a>
+            <a href="http://localhost:3000/projects/1" class="page-link" target="_blank">Project Detail</a>
+            <a href="http://localhost:3000/upload" class="page-link" target="_blank">Upload</a>
+            <a href="http://localhost:3000/results" class="page-link" target="_blank">Results</a>
+            <a href="http://localhost:3000/settings" class="page-link" target="_blank">Settings</a>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <h2>🚀 Automated Tests</h2>
+        <button onclick="runAllTests()">Run All Tests</button>
+        <button onclick="clearResults()">Clear Results</button>
+        <button onclick="testSpecificFeature('checklist')">Test Checklist Editor</button>
+        <button onclick="testSpecificFeature('export')">Test Export System</button>
+        <button onclick="testSpecificFeature('audio')">Test Audio Management</button>
+        
+        <div id="test-results"></div>
+    </div>
+
+    <div class="test-container">
+        <h2>📊 Test Summary</h2>
+        <div id="test-summary" class="summary">
+            Click "Run All Tests" to start testing...
+        </div>
+    </div>
+
+    <script>
+        let testResults = [];
+        
+        async function runAllTests() {
+            clearResults();
+            logResult('Starting comprehensive frontend tests...', 'info');
+            
+            // Test backend connectivity
+            await testBackendConnection();
+            
+            // Test frontend API endpoints
+            await testFrontendAPIs();
+            
+            // Test page functionality
+            await testPageFunctionality();
+            
+            // Test specific features
+            await testChecklistFunctionality();
+            await testExportFunctionality();
+            await testAudioManagement();
+            
+            // Test real data flow
+            await testDataFlow();
+            
+            updateSummary();
+        }
+        
+        async function testBackendConnection() {
+            logResult('Testing backend connection...', 'loading');
+            
+            try {
+                const response = await fetch('http://localhost:7777/health');
+                const data = await response.json();
+                logResult(`✅ Backend Health: ${data.status}`, 'pass');
+                logApiResponse('Backend Health', data);
+            } catch (error) {
+                logResult(`❌ Backend connection failed: ${error.message}`, 'fail');
+            }
+        }
+        
+        async function testFrontendAPIs() {
+            logResult('Testing frontend API endpoints...', 'loading');
+            
+            const endpoints = [
+                { path: '/api/v1/projects', name: 'Projects API' },
+                { path: '/api/v1/projects/1', name: 'Project Details' },
+                { path: '/api/v1/projects/1/files', name: 'Audio Files' },
+                { path: '/api/v1/checklists/templates', name: 'Checklist Templates' },
+                { path: '/api/v1/exports?action=templates', name: 'Export Templates' },
+                { path: '/api/v1/system?action=health', name: 'System Health' }
+            ];
+            
+            for (const endpoint of endpoints) {
+                try {
+                    const response = await fetch(`http://localhost:3000${endpoint.path}`);
+                    const data = await response.json();
+                    logResult(`✅ ${endpoint.name}: Working`, 'pass');
+                    logApiResponse(endpoint.name, data);
+                } catch (error) {
+                    logResult(`❌ ${endpoint.name}: ${error.message}`, 'fail');
+                }
+            }
+        }
+        
+        async function testPageFunctionality() {
+            logResult('Testing page accessibility...', 'loading');
+            
+            const pages = [
+                { path: '/', name: 'Dashboard' },
+                { path: '/projects', name: 'Projects Page' },
+                { path: '/upload', name: 'Upload Page' },
+                { path: '/results', name: 'Results Page' }
+            ];
+            
+            for (const page of pages) {
+                try {
+                    const response = await fetch(`http://localhost:3000${page.path}`);
+                    if (response.ok) {
+                        logResult(`✅ ${page.name}: Accessible`, 'pass');
+                    } else {
+                        logResult(`❌ ${page.name}: HTTP ${response.status}`, 'fail');
+                    }
+                } catch (error) {
+                    logResult(`❌ ${page.name}: ${error.message}`, 'fail');
+                }
+            }
+        }
+        
+        async function testChecklistFunctionality() {
+            logResult('Testing checklist functionality...', 'loading');
+            
+            try {
+                // Test templates
+                const templatesResponse = await fetch('http://localhost:3000/api/v1/checklists/templates');
+                const templates = await templatesResponse.json();
+                logResult(`✅ Checklist Templates: ${templates.templates.length} available`, 'pass');
+                
+                // Test project checklist
+                const checklistResponse = await fetch('http://localhost:3000/api/v1/projects/1?action=checklist');
+                const checklist = await checklistResponse.json();
+                logResult(`✅ Project Checklist: ${checklist.categories.length} categories`, 'pass');
+                logApiResponse('Project Checklist', checklist);
+                
+            } catch (error) {
+                logResult(`❌ Checklist functionality: ${error.message}`, 'fail');
+            }
+        }
+        
+        async function testExportFunctionality() {
+            logResult('Testing export functionality...', 'loading');
+            
+            try {
+                // Test export templates
+                const templatesResponse = await fetch('http://localhost:3000/api/v1/exports?action=templates');
+                const templates = await templatesResponse.json();
+                logResult(`✅ Export Templates: ${templates.templates.length} available`, 'pass');
+                
+                // Test export creation
+                const exportResponse = await fetch('http://localhost:3000/api/v1/exports', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        project_id: '1',
+                        format: 'excel',
+                        template: 'standard'
+                    })
+                });
+                const exportData = await exportResponse.json();
+                logResult(`✅ Export Creation: Export ${exportData.id} created`, 'pass');
+                logApiResponse('Export Creation', exportData);
+                
+            } catch (error) {
+                logResult(`❌ Export functionality: ${error.message}`, 'fail');
+            }
+        }
+        
+        async function testAudioManagement() {
+            logResult('Testing audio management...', 'loading');
+            
+            try {
+                // Test audio files list
+                const filesResponse = await fetch('http://localhost:3000/api/v1/projects/1/files');
+                const files = await filesResponse.json();
+                logResult(`✅ Audio Files: ${files.files.length} files found`, 'pass');
+                
+                if (files.files.length > 0) {
+                    const fileId = files.files[0].id;
+                    
+                    // Test file details
+                    const fileResponse = await fetch(`http://localhost:3000/api/v1/projects/1/files/${fileId}`);
+                    const fileData = await fileResponse.json();
+                    logResult(`✅ File Details: ${fileData.name} (${fileData.status})`, 'pass');
+                    
+                    // Test transcription
+                    const transcriptionResponse = await fetch(`http://localhost:3000/api/v1/projects/1/files/${fileId}?action=transcription`);
+                    const transcription = await transcriptionResponse.json();
+                    logResult(`✅ Transcription: ${transcription.language} detected`, 'pass');
+                    
+                    // Test analysis
+                    const analysisResponse = await fetch(`http://localhost:3000/api/v1/projects/1/files/${fileId}?action=analysis`);
+                    const analysis = await analysisResponse.json();
+                    logResult(`✅ Analysis: ${analysis.overall_score}% score`, 'pass');
+                    logApiResponse('Analysis Results', analysis);
+                }
+                
+            } catch (error) {
+                logResult(`❌ Audio management: ${error.message}`, 'fail');
+            }
+        }
+        
+        async function testDataFlow() {
+            logResult('Testing complete data flow...', 'loading');
+            
+            try {
+                // Test project creation
+                const projectResponse = await fetch('http://localhost:3000/api/v1/projects', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: 'Browser Test Project',
+                        description: 'Testing from browser interface',
+                        checklist_id: 'cs-quality-v1'
+                    })
+                });
+                const project = await projectResponse.json();
+                logResult(`✅ Project Creation: ${project.name} created`, 'pass');
+                
+                // Test project retrieval
+                const getProjectResponse = await fetch(`http://localhost:3000/api/v1/projects/${project.id}`);
+                const projectData = await getProjectResponse.json();
+                logResult(`✅ Project Retrieval: Project details retrieved`, 'pass');
+                logApiResponse('Created Project', projectData);
+                
+            } catch (error) {
+                logResult(`❌ Data flow test: ${error.message}`, 'fail');
+            }
+        }
+        
+        async function testSpecificFeature(feature) {
+            clearResults();
+            logResult(`Testing ${feature} functionality...`, 'info');
+            
+            switch (feature) {
+                case 'checklist':
+                    await testChecklistFunctionality();
+                    break;
+                case 'export':
+                    await testExportFunctionality();
+                    break;
+                case 'audio':
+                    await testAudioManagement();
+                    break;
+            }
+            
+            updateSummary();
+        }
+        
+        function logResult(message, type) {
+            const result = { message, type, timestamp: new Date().toISOString() };
+            testResults.push(result);
+            
+            const resultsDiv = document.getElementById('test-results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${type}`;
+            resultDiv.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            resultsDiv.appendChild(resultDiv);
+            
+            // Scroll to bottom
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+        
+        function logApiResponse(title, data) {
+            const resultsDiv = document.getElementById('test-results');
+            const responseDiv = document.createElement('div');
+            responseDiv.className = 'api-response';
+            responseDiv.innerHTML = `<strong>${title} Response:</strong><br><pre>${JSON.stringify(data, null, 2)}</pre>`;
+            resultsDiv.appendChild(responseDiv);
+        }
+        
+        function clearResults() {
+            testResults = [];
+            document.getElementById('test-results').innerHTML = '';
+            document.getElementById('test-summary').innerHTML = 'Running tests...';
+        }
+        
+        function updateSummary() {
+            const total = testResults.length;
+            const passed = testResults.filter(r => r.type === 'pass').length;
+            const failed = testResults.filter(r => r.type === 'fail').length;
+            const successRate = total > 0 ? ((passed / total) * 100).toFixed(1) : 0;
+            
+            const summaryDiv = document.getElementById('test-summary');
+            summaryDiv.innerHTML = `
+                <h3>📊 Test Results Summary</h3>
+                <p><strong>Total Tests:</strong> ${total}</p>
+                <p><strong>Passed:</strong> ${passed} ✅</p>
+                <p><strong>Failed:</strong> ${failed} ❌</p>
+                <p><strong>Success Rate:</strong> ${successRate}%</p>
+                <p><strong>Status:</strong> ${successRate >= 80 ? '🟢 Good' : successRate >= 60 ? '🟡 Fair' : '🔴 Needs Attention'}</p>
+            `;
+        }
+        
+        // Auto-run basic tests on page load
+        window.onload = function() {
+            logResult('Browser test page loaded successfully', 'info');
+            logResult('Click "Run All Tests" to start comprehensive testing', 'info');
+        };
+    </script>
+</body>
+</html> 
