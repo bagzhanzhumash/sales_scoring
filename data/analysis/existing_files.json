@@ -1,0 +1,33 @@
+{
+  "processed_files": {
+    "Исходящий 24 апр 2025 с 5324 на 9109856060": {
+      "audio_path": "data/audio/Исходящий 24 апр 2025 с 5324 на 9109856060.mp3",
+      "audio_url": null,
+      "transcript_path": "data/transcript/Исходящий 24 апр 2025 с 5324 на 9109856060.txt",
+      "source_row": null
+    },
+    "Исходящий 23 апр 2025": {
+      "audio_path": "data/audio/Исходящий 23 апр 2025.mp3",
+      "audio_url": null,
+      "transcript_path": "data/transcript/Исходящий 23 апр 2025.txt",
+      "source_row": null
+    },
+    "Исходящий 23 мая 2025 с 5324 на 9256529019": {
+      "audio_path": "data/audio/Исходящий 23 мая 2025 с 5324 на 9256529019.mp3",
+      "audio_url": null,
+      "transcript_path": "data/transcript/Исходящий 23 мая 2025 с 5324 на 9256529019.txt",
+      "source_row": null
+    },
+    "Исходящий 23 апр 2025 с 5324 на 9267938022": {
+      "audio_path": "data/audio/Исходящий 23 апр 2025 с 5324 на 9267938022.mp3",
+      "audio_url": null,
+      "transcript_path": "data/transcript/Исходящий 23 апр 2025 с 5324 на 9267938022.txt",
+      "source_row": null
+    }
+  },
+  "summary": {
+    "total_files": 4,
+    "audio_files": 4,
+    "process_date": "2025-07-01T00:11:02.583587"
+  }
+}
