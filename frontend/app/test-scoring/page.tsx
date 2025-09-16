@@ -36,7 +36,7 @@
 
 "use client"
 
-import { useState, useCallback, useMemo } from "react"
+import { useState, useCallback, useMemo, useEffect } from "react"
 import { FileUploadSection } from "@/components/scoring/file-upload-section"
 import { ChecklistSection } from "@/components/scoring/checklist-section"  
 import { AutoAnalysisSection } from "@/components/scoring/auto-analysis-section"
@@ -117,6 +117,7 @@ export default function TestScoringPage() {
   
   // File management state
   const [fileSessions, setFileSessions] = useState<FileSession[]>([])
+  const [sessionId, setSessionId] = useState<string | null>(null)
   const [selectedSessions, setSelectedSessions] = useState<Set<string>>(new Set())
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list')
@@ -139,6 +140,24 @@ export default function TestScoringPage() {
   
   // Global state
   const [globalProgress, setGlobalProgress] = useState(0)
+
+  // Load sessionId from URL or localStorage, persist changes
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const fromUrl = params.get("sessionId")
+    const fromStorage = localStorage.getItem("scoring.sessionId")
+    const id = fromUrl || fromStorage
+    if (id) {
+      setSessionId(id)
+      localStorage.setItem("scoring.sessionId", id)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (sessionId) {
+      localStorage.setItem("scoring.sessionId", sessionId)
+    }
+  }, [sessionId])
 
   // Computed values for large-scale operations
   const filteredSessions = useMemo(() => {
