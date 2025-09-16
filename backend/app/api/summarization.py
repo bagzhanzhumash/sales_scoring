@@ -5,7 +5,12 @@ API endpoints for text summarization backed by Ollama.
 import logging
 from fastapi import APIRouter, Depends, HTTPException
 
-from ..models import SummarizationRequest, SummarizationResponse
+from ..models import (
+    CallSummarizationRequest,
+    CallSummarizationResponse,
+    SummarizationRequest,
+    SummarizationResponse,
+)
 from ..summarization_service import (
     SummarizationService,
     SummarizationServiceError,
@@ -44,3 +49,19 @@ async def summarize_health(
 ) -> dict:
     """Expose health diagnostics for the summarization backend."""
     return await service.health()
+
+
+@router.post("/summarize/call", response_model=CallSummarizationResponse)
+async def summarize_call(
+    request: CallSummarizationRequest,
+    service: SummarizationService = Depends(get_summarization_service),
+) -> CallSummarizationResponse:
+    """Generate a structured summary tailored for the scoring dashboard."""
+    try:
+        return await service.summarize_call(request)
+    except SummarizationServiceError as exc:
+        logger.error("Call summarization failed: %s", exc)
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except Exception as exc:  # pragma: no cover - defensive guard
+        logger.exception("Unexpected call summarization error")
+        raise HTTPException(status_code=500, detail="Failed to build call summary") from exc

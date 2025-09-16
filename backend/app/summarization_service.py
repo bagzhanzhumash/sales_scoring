@@ -1,14 +1,24 @@
-"""
-Summarization service that delegates to Ollama's Gemma 3 model.
-"""
+"""Summarization service that delegates to Ollama's Gemma 3 model."""
 
+import json
 import logging
-from typing import Any, Dict, Optional
+import re
+import textwrap
+from typing import Any, Dict, List, Literal, Optional
 
 import httpx
 
 from .config import settings
-from .models import SummarizationRequest, SummarizationResponse, SummaryFormat
+from .models import (
+    CallSummarizationRequest,
+    CallSummarizationResponse,
+    ChecklistAnalysisRequest,
+    ChecklistAnalysisResult,
+    SummarizationRequest,
+    SummarizationResponse,
+    SummaryFormat,
+)
+from .call_summary import build_call_summary
 
 logger = logging.getLogger(__name__)
 
@@ -77,6 +87,30 @@ class SummarizationService:
         sections.append("Content to summarize:\n" + request.text.strip())
         return "\n\n".join(part for part in sections if part)
 
+    @staticmethod
+    def _extract_json(content: str) -> Dict[str, Any]:
+        """Extract a JSON object from the LLM response."""
+        try:
+            return json.loads(content)
+        except json.JSONDecodeError:
+            pass
+
+        fenced = re.search(r"```json\s*(.*?)```", content, re.DOTALL)
+        if fenced:
+            try:
+                return json.loads(fenced.group(1))
+            except json.JSONDecodeError:
+                pass
+
+        compact = re.search(r"\{.*\}", content, re.DOTALL)
+        if compact:
+            try:
+                return json.loads(compact.group(0))
+            except json.JSONDecodeError as exc:  # pragma: no cover - defensive guard
+                raise SummarizationServiceError("Received malformed JSON from summarization model") from exc
+
+        raise SummarizationServiceError("Summarization model did not return JSON output")
+
     async def summarize(self, request: SummarizationRequest) -> SummarizationResponse:
         """Generate a summary for the supplied text."""
         client = await self._get_client()
@@ -140,6 +174,193 @@ class SummarizationService:
                 "endpoint": self.base_url,
                 "error": str(exc),
             }
+
+    async def score_checklist(
+        self, request: ChecklistAnalysisRequest
+    ) -> List[ChecklistAnalysisResult]:
+        """Score a transcript against a structured checklist using the LLM."""
+
+        call_summary = await self.summarize_call(
+            CallSummarizationRequest(
+                transcript_text=request.transcript_text,
+                client_name=request.client_name,
+                status=request.status,
+                action_items=request.action_items,
+                decision=request.decision,
+                segments=request.segments,
+            )
+        )
+
+        checklist_payload = request.checklist.model_dump()
+        summary_payload = call_summary.model_dump()
+
+        evaluation_prompt = textwrap.dedent(
+            f"""
+            {self.system_prompt}
+
+            Ты аналитик контроля качества контакт-центра. На основе транскрипта и
+            структурированной сводки оцени выполнение критериев чек-листа.
+
+            Верни JSON строго в формате:
+            {{
+              "results": [
+                {{
+                  "criterion_id": "<ID критерия из чек-листа>",
+                  "category_id": "<ID категории>",
+                  "score": "pass" | "fail" | "unknown",
+                  "confidence": <целое 0-100>,
+                  "explanation": "Короткое пояснение на русском",
+                  "needs_review": true | false
+                }}
+              ]
+            }}
+
+            Используй "pass", если критерий явно выполнен, "fail" если явное
+            нарушение, и "unknown", если данных недостаточно. Если не уверен,
+            ставь needs_review = true.
+
+            Транскрипт:
+            <<<TRANSCRIPT>>>
+            {request.transcript_text.strip()}
+            <<<END TRANSCRIPT>>>
+
+            Чек-лист (JSON):
+            {json.dumps(checklist_payload, ensure_ascii=False)}
+
+            Сводка разговора (JSON):
+            {json.dumps(summary_payload, ensure_ascii=False)}
+            """
+        ).strip()
+
+        client = await self._get_client()
+        payload: Dict[str, Any] = {
+            "model": self.model_name,
+            "prompt": evaluation_prompt,
+            "stream": False,
+            "options": {
+                "temperature": self.default_temperature,
+                "top_p": self.default_top_p,
+                "num_predict": self.default_max_tokens,
+            },
+        }
+
+        try:
+            response = await client.post("/api/generate", json=payload)
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            logger.error("Checklist evaluation failed: %s", exc.response.text)
+            raise SummarizationServiceError(
+                f"Checklist analysis failed with status {exc.response.status_code}"
+            ) from exc
+        except httpx.HTTPError as exc:
+            logger.error("Error while requesting checklist evaluation: %s", exc)
+            raise SummarizationServiceError("Failed to reach Ollama for checklist analysis") from exc
+
+        raw_output = response.json().get("response", "")
+        parsed = self._extract_json(raw_output)
+        raw_results = parsed.get("results", [])
+
+        normalized: Dict[str, ChecklistAnalysisResult] = {}
+        for item in raw_results:
+            try:
+                criterion_id = str(item.get("criterion_id") or item.get("criterion") or "").strip()
+                category_id = str(item.get("category_id") or item.get("category") or "").strip()
+                if not criterion_id:
+                    continue
+
+                score_raw = item.get("score", "unknown")
+                if isinstance(score_raw, (int, float)):
+                    if score_raw >= 0.75:
+                        score_value: Literal[0, 1, "?"] = 1
+                    elif score_raw <= 0.25:
+                        score_value = 0
+                    else:
+                        score_value = "?"
+                else:
+                    score_text = str(score_raw).strip().lower()
+                    if score_text in {"pass", "yes", "true", "1", "выполнено"}:
+                        score_value = 1
+                    elif score_text in {"fail", "no", "false", "0", "не выполнено"}:
+                        score_value = 0
+                    else:
+                        score_value = "?"
+
+                confidence_raw = item.get("confidence", 60)
+                try:
+                    confidence = int(float(confidence_raw))
+                except (TypeError, ValueError):
+                    confidence = 60
+                confidence = max(0, min(confidence, 100))
+
+                explanation = str(item.get("explanation") or "Критерий требует проверки оператора.").strip()
+                needs_review = item.get("needs_review")
+                if isinstance(needs_review, bool):
+                    needs_review_flag = needs_review
+                else:
+                    needs_review_flag = score_value != 1 or confidence < 70
+
+                normalized[criterion_id] = ChecklistAnalysisResult(
+                    criterion_id=criterion_id,
+                    category_id=category_id or "",
+                    score=score_value,
+                    confidence=confidence,
+                    explanation=explanation,
+                    needs_review=needs_review_flag,
+                )
+            except Exception as exc:  # pragma: no cover - defensive guard
+                logger.warning("Failed to normalize checklist item %s: %s", item, exc)
+
+        results: List[ChecklistAnalysisResult] = []
+        for category in request.checklist.categories:
+            for criterion in category.criteria:
+                key = criterion.id
+                normalized_result = normalized.get(key)
+                if normalized_result:
+                    # Fill missing category id if the model skipped it
+                    if not normalized_result.category_id:
+                        normalized_result.category_id = category.id
+                    results.append(normalized_result)
+                    continue
+
+                results.append(
+                    ChecklistAnalysisResult(
+                        criterion_id=criterion.id,
+                        category_id=category.id,
+                        score="?",
+                        confidence=50,
+                        explanation="Модель не смогла оценить критерий автоматически. Проверьте вручную.",
+                        needs_review=True,
+                    )
+                )
+
+        return results
+
+    async def summarize_call(
+        self, request: CallSummarizationRequest
+    ) -> CallSummarizationResponse:
+        """Produce a structured call summary payload consumed by the frontend."""
+
+        llm_bullets: Optional[str] = None
+        # The conversational summary benefits from concise bullet points. We
+        # attempt to obtain them from the LLM but gracefully fall back to the
+        # heuristic builder if the generation fails or is unavailable.
+        try:
+            bullet_summary = await self.summarize(
+                SummarizationRequest(
+                    text=request.transcript_text,
+                    instructions=(
+                        "Выдели 2-3 ключевые темы разговора. Форматируй ответ в виде кратких пунктов."
+                    ),
+                    format=SummaryFormat.BULLET,
+                )
+            )
+            llm_bullets = bullet_summary.summary
+        except SummarizationServiceError as exc:
+            logger.warning("Falling back to heuristic call summary: %s", exc)
+        except Exception as exc:  # pragma: no cover - defensive guard
+            logger.exception("Unexpected error while generating call summary hints")
+
+        return build_call_summary(request, llm_bullets)
 
 
 summarization_service = SummarizationService()

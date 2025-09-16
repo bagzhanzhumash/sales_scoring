@@ -116,14 +116,14 @@ export function StatisticsSection({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <BarChart3 className="h-5 w-5" />
-          Analysis Statistics
+          Статистика анализа
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Overall Performance */}
         <div className={`p-6 rounded-lg border ${getPerformanceBgColor(statistics.overallScore)}`}>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold">Overall Performance</h3>
+            <h3 className="text-lg font-semibold">Общий результат</h3>
             <div className={`text-3xl font-bold ${getPerformanceColor(statistics.overallScore)}`}>
               {statistics.overallScore}%
             </div>
@@ -135,7 +135,7 @@ export function StatisticsSection({
                 <CheckCircle className="h-5 w-5 text-green-600 mr-1" />
                 <span className="text-2xl font-bold text-green-600">{statistics.passedCriteria}</span>
               </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Passed</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Выполнено</p>
             </div>
             
             <div className="text-center">
@@ -143,7 +143,7 @@ export function StatisticsSection({
                 <XCircle className="h-5 w-5 text-red-600 mr-1" />
                 <span className="text-2xl font-bold text-red-600">{statistics.failedCriteria}</span>
               </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Failed</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Не выполнено</p>
             </div>
             
             <div className="text-center">
@@ -151,7 +151,7 @@ export function StatisticsSection({
                 <HelpCircle className="h-5 w-5 text-yellow-600 mr-1" />
                 <span className="text-2xl font-bold text-yellow-600">{statistics.reviewCriteria}</span>
               </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Review</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">На проверке</p>
             </div>
             
             <div className="text-center">
@@ -159,7 +159,7 @@ export function StatisticsSection({
                 <Target className="h-5 w-5 text-blue-600 mr-1" />
                 <span className="text-2xl font-bold text-blue-600">{statistics.totalCriteria}</span>
               </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Total</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Всего</p>
             </div>
           </div>
         </div>
@@ -168,12 +168,12 @@ export function StatisticsSection({
         <div>
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <Zap className="h-5 w-5" />
-            Confidence Distribution
+            Распределение уверенности
           </h3>
           
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600 dark:text-gray-400">Average Confidence</span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">Средняя уверенность</span>
               <Badge variant="secondary" className="text-lg px-3 py-1">
                 {statistics.avgConfidence}%
               </Badge>
@@ -183,7 +183,7 @@ export function StatisticsSection({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                  <span className="text-sm">High Confidence (80%+)</span>
+                  <span className="text-sm">Высокая уверенность (80%+)</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium">{statistics.highConfidence}</span>
@@ -199,7 +199,7 @@ export function StatisticsSection({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                  <span className="text-sm">Medium Confidence (60-79%)</span>
+                  <span className="text-sm">Средняя уверенность (60–79%)</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium">{statistics.mediumConfidence}</span>
@@ -215,7 +215,7 @@ export function StatisticsSection({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                  <span className="text-sm">Low Confidence (&lt;60%)</span>
+                  <span className="text-sm">Низкая уверенность (&lt;60%)</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium">{statistics.lowConfidence}</span>
@@ -235,7 +235,7 @@ export function StatisticsSection({
         <div>
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <TrendingUp className="h-5 w-5" />
-            Category Performance
+            Эффективность по категориям
           </h3>
           
           <div className="space-y-3">
@@ -256,8 +256,8 @@ export function StatisticsSection({
                 <div className="space-y-2">
                   <Progress value={category.percentage} className="h-2" />
                   <div className="flex justify-between text-xs text-gray-500">
-                    <span>Avg Confidence: {category.avgConfidence}%</span>
-                    <span>{category.passed} criteria passed</span>
+                    <span>Ср. уверенность: {category.avgConfidence}%</span>
+                    <span>{category.passed} критериев выполнено</span>
                   </div>
                 </div>
               </div>
@@ -269,33 +269,33 @@ export function StatisticsSection({
         <div>
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <Users className="h-5 w-5" />
-            AI vs Human Analysis
+            Сравнение ИИ и экспертов
           </h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="border rounded-lg p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Bot className="h-5 w-5 text-blue-600" />
-                <h4 className="font-medium">AI Agreement</h4>
+                <h4 className="font-medium">Совпадение с ИИ</h4>
               </div>
               <div className="text-2xl font-bold text-blue-600 mb-1">
                 {statistics.llmHumanAgreement}%
               </div>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                AI and human evaluations align
+                Процент совпадения оценок ИИ и людей
               </p>
             </div>
             
             <div className="border rounded-lg p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Percent className="h-5 w-5 text-purple-600" />
-                <h4 className="font-medium">Manual Overrides</h4>
+                <h4 className="font-medium">Ручные правки</h4>
               </div>
               <div className="text-2xl font-bold text-purple-600 mb-1">
                 {statistics.editedCriteria}
               </div>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Criteria manually adjusted
+                Столько критериев исправлено вручную
               </p>
             </div>
           </div>
@@ -307,17 +307,17 @@ export function StatisticsSection({
               </div>
               <div>
                 <p className="text-sm text-blue-800 dark:text-blue-200 font-medium">
-                  Quality Insights
+                  Выводы по качеству
                 </p>
                 <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
                   {statistics.needsReviewCriteria > 0 && 
-                    `${statistics.needsReviewCriteria} criteria need manual review due to low confidence scores. `
+                    `${statistics.needsReviewCriteria} критериев требуют ручной проверки из-за низкой уверенности. `
                   }
                   {statistics.llmHumanAgreement >= 90 && 
-                    "High AI accuracy detected - consider automating similar evaluations."
+                    "Высокая точность ИИ — можно автоматизировать похожие проверки."
                   }
                   {statistics.llmHumanAgreement < 70 && 
-                    "Consider refining AI prompts or providing more training examples."
+                    "Рекомендуем уточнить подсказки для ИИ или добавить примеры обучения."
                   }
                 </p>
               </div>
@@ -332,28 +332,28 @@ export function StatisticsSection({
               <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
                 {Math.round((statistics.passedCriteria / statistics.totalCriteria) * 100) || 0}%
               </div>
-              <div className="text-xs text-gray-500">Pass Rate</div>
+              <div className="text-xs text-gray-500">Доля выполнения</div>
             </div>
             
             <div>
               <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
                 {statistics.avgConfidence}%
               </div>
-              <div className="text-xs text-gray-500">Avg Confidence</div>
+              <div className="text-xs text-gray-500">Средняя уверенность</div>
             </div>
             
             <div>
               <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
                 {statistics.llmHumanAgreement}%
               </div>
-              <div className="text-xs text-gray-500">AI Agreement</div>
+              <div className="text-xs text-gray-500">Совпадение с ИИ</div>
             </div>
             
             <div>
               <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
                 {statistics.needsReviewCriteria}
               </div>
-              <div className="text-xs text-gray-500">Need Review</div>
+              <div className="text-xs text-gray-500">Нужна проверка</div>
             </div>
           </div>
         </div>

@@ -11,11 +11,9 @@ import {
   Upload, 
   File, 
   Music, 
-  FileText, 
   CheckCircle, 
   AlertTriangle,
   Loader2,
-  X,
   Plus,
   FolderOpen
 } from "lucide-react"
@@ -33,29 +31,29 @@ interface UploadedFile {
 
 interface FileUploadSectionProps {
   audioFile: UploadedFile | null
-  transcriptFile: UploadedFile | null
   onAudioUpload: (files: File | File[]) => void
-  onTranscriptUpload: (files: File | File[]) => void
   onTranscribe: () => void
   isTranscribing: boolean
-  hasTranscript: boolean
+  hasTranscript?: boolean
   supportMultiple?: boolean
 }
 
 export function FileUploadSection({
   audioFile,
-  transcriptFile,
   onAudioUpload,
-  onTranscriptUpload,
   onTranscribe,
   isTranscribing,
-  hasTranscript,
+  hasTranscript = false,
   supportMultiple = false
 }: FileUploadSectionProps) {
+  const uploadStatusLabels: Record<NonNullable<UploadedFile["status"]>, string> = {
+    pending: "В очереди",
+    processing: "Обработка",
+    completed: "Готово",
+    failed: "Ошибка"
+  }
   const [uploadProgress, setUploadProgress] = useState(0)
   const [pendingFiles, setPendingFiles] = useState<File[] | null>(null)
-  const [transcriptUploadProgress, setTranscriptUploadProgress] = useState(0)
-  const [pendingTranscriptFiles, setPendingTranscriptFiles] = useState<File[] | null>(null)
 
   // Handle file upload completion with useEffect to avoid setState during render
   useEffect(() => {
@@ -72,22 +70,6 @@ export function FileUploadSection({
       }, 0)
     }
   }, [uploadProgress, pendingFiles, onAudioUpload, supportMultiple])
-
-  // Handle transcript upload completion with useEffect to avoid setState during render
-  useEffect(() => {
-    if (transcriptUploadProgress === 100 && pendingTranscriptFiles) {
-      setTimeout(() => {
-        console.log('Calling onTranscriptUpload with', pendingTranscriptFiles);
-        if (supportMultiple) {
-          onTranscriptUpload(pendingTranscriptFiles)
-        } else {
-          onTranscriptUpload(pendingTranscriptFiles[0])
-        }
-        setPendingTranscriptFiles(null)
-        setTranscriptUploadProgress(0)
-      }, 0)
-    }
-  }, [transcriptUploadProgress, pendingTranscriptFiles, onTranscriptUpload, supportMultiple])
 
   // Audio file dropzone - supports multiple files
   const onAudioDrop = useCallback((acceptedFiles: File[]) => {
@@ -122,39 +104,6 @@ export function FileUploadSection({
     maxSize: 500 * 1024 * 1024 // 500MB per file
   })
 
-  // Transcript file dropzone - supports multiple files
-  const onTranscriptDrop = useCallback((acceptedFiles: File[]) => {
-    if (acceptedFiles.length > 0) {
-      // Store transcript files and start upload progress simulation
-      setPendingTranscriptFiles(acceptedFiles)
-      setTranscriptUploadProgress(0)
-      
-      const interval = setInterval(() => {
-        setTranscriptUploadProgress(prev => {
-          if (prev >= 100) {
-            clearInterval(interval)
-            return 100
-          }
-          return prev + 10
-        })
-      }, 50) // Faster for transcript files since they're smaller
-    }
-  }, [supportMultiple])
-
-  const {
-    getRootProps: getTranscriptRootProps,
-    getInputProps: getTranscriptInputProps,
-    isDragActive: isTranscriptDragActive
-  } = useDropzone({
-    onDrop: onTranscriptDrop,
-    accept: {
-      'text/*': ['.txt', '.json', '.srt', '.vtt', '.csv'],
-      'application/json': ['.json']
-    },
-    maxFiles: supportMultiple ? 200 : 1,
-    maxSize: 10 * 1024 * 1024 // 10MB
-  })
-
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes'
     const k = 1024
@@ -168,17 +117,17 @@ export function FileUploadSection({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Upload className="h-5 w-5" />
-          {supportMultiple ? "Bulk File Upload (up to 200 files)" : "File Upload"}
+          {supportMultiple ? "Массовая загрузка файлов (до 200 штук)" : "Загрузка файла"}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Audio Upload */}
         <div className="space-y-3">
           <h3 className="text-sm font-medium flex items-center gap-2">
-            Audio Files
+            Аудиофайлы
             {supportMultiple && (
               <Badge variant="outline" className="text-xs">
-                Bulk upload: up to 200 files
+                Пакет: до 200 файлов
               </Badge>
             )}
           </h3>
@@ -203,16 +152,16 @@ export function FileUploadSection({
                 )}
                 <p className="text-sm text-gray-600 dark:text-gray-400">
                   {isAudioDragActive 
-                    ? "Drop the files here..." 
+                    ? "Перетащите файлы сюда" 
                     : supportMultiple 
-                    ? "Drag & drop multiple audio/video files, or click to select"
-                    : "Drag & drop an audio file, or click to select"
+                    ? "Перетащите несколько аудио/видео файлов или нажмите, чтобы выбрать"
+                    : "Перетащите аудио или нажмите, чтобы выбрать"
                   }
                 </p>
                 <p className="text-xs text-gray-500 mt-1">
                   {supportMultiple 
-                    ? "Supports MP3, WAV, M4A, OGG, MP4, AVI, MOV (max 500MB each, up to 200 files)"
-                    : "Supports MP3, WAV, M4A, OGG (max 500MB)"
+                    ? "Поддерживаются MP3, WAV, M4A, OGG, MP4, AVI, MOV (до 500 МБ каждый, максимум 200 файлов)"
+                    : "Поддерживаются MP3, WAV, M4A, OGG (до 500 МБ)"
                   }
                 </p>
                 
@@ -220,7 +169,7 @@ export function FileUploadSection({
                   <div className="flex items-center gap-2 mt-3">
                     <Button variant="outline" size="sm">
                       <Plus className="h-4 w-4 mr-2" />
-                      Select Files
+                      Выбрать файлы
                     </Button>
                   </div>
                 )}
@@ -238,7 +187,7 @@ export function FileUploadSection({
                   <p className="text-xs text-gray-500">{formatFileSize(audioFile.size)}</p>
                   {audioFile.uploadedAt && (
                     <p className="text-xs text-gray-500">
-                      Uploaded: {new Date(audioFile.uploadedAt).toLocaleTimeString()}
+                      Загрузка: {new Date(audioFile.uploadedAt).toLocaleTimeString()}
                     </p>
                   )}
                 </div>
@@ -248,7 +197,7 @@ export function FileUploadSection({
                   variant={audioFile.status === "completed" ? "default" : "secondary"}
                   className="text-xs"
                 >
-                  {audioFile.status}
+                  {uploadStatusLabels[audioFile.status] || audioFile.status}
                 </Badge>
               )}
             </div>
@@ -259,15 +208,15 @@ export function FileUploadSection({
               <Progress value={uploadProgress} className="h-2" />
               <p className="text-xs text-gray-500 text-center">
                 {supportMultiple && pendingFiles ? 
-                  `Uploading ${pendingFiles.length} file${pendingFiles.length > 1 ? 's' : ''}... ${uploadProgress}%` :
-                  `Uploading... ${uploadProgress}%`
+                  `Загружаем ${pendingFiles.length} файл(ов)... ${uploadProgress}%` :
+                  `Загрузка... ${uploadProgress}%`
                 }
               </p>
               {supportMultiple && pendingFiles && pendingFiles.length > 10 && (
                 <div className="text-xs text-blue-600 text-center">
                   {pendingFiles.length > 100 ? 
-                    `Extra large batch upload in progress (${pendingFiles.length} files) - This may take several minutes` :
-                    `Large batch upload in progress (${pendingFiles.length} files)`
+                    `Очень большая партия (${pendingFiles.length} файлов) — это может занять несколько минут` :
+                    `Загружается большая партия (${pendingFiles.length} файлов)`
                   }
                 </div>
               )}
@@ -275,155 +224,70 @@ export function FileUploadSection({
           )}
         </div>
 
-        {/* Transcript Upload */}
-        <div className="space-y-3">
-          <h3 className="text-sm font-medium flex items-center gap-2">
-            Transcript Files
-            <Badge variant="secondary" className="ml-2">Optional</Badge>
-            {supportMultiple && (
-              <Badge variant="outline" className="text-xs ml-2">
-                Bulk upload: up to 200 files
-              </Badge>
-            )}
-          </h3>
-          
-          {!transcriptFile && !hasTranscript || supportMultiple ? (
-            <div
-              {...getTranscriptRootProps()}
-              className={`
-                border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors
-                ${isTranscriptDragActive 
-                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-950' 
-                  : 'border-gray-300 hover:border-gray-400 dark:border-gray-600'
-                }
-              `}
-            >
-              <input {...getTranscriptInputProps()} />
-              <div className="flex flex-col items-center">
-                {supportMultiple ? (
-                  <FolderOpen className="h-6 w-6 mx-auto mb-2 text-gray-400" />
-                ) : (
-                  <FileText className="h-6 w-6 mx-auto mb-2 text-gray-400" />
-                )}
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  {isTranscriptDragActive 
-                    ? "Drop the transcript files here..." 
-                    : supportMultiple
-                    ? "Drag & drop multiple transcript files, or click to select"
-                    : "Upload existing transcript (optional)"
-                  }
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  {supportMultiple 
-                    ? "Supports TXT, JSON, SRT, VTT, CSV (max 10MB each, up to 200 files)"
-                    : "Supports TXT, JSON, SRT, VTT, CSV (max 10MB)"
-                  }
-                </p>
-                
-                {supportMultiple && (
-                  <div className="flex items-center gap-2 mt-3">
-                    <Button variant="outline" size="sm">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Select Transcript Files
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : null}
-
-          {/* Current transcript file display (for single file mode) */}
-          {transcriptFile && !supportMultiple && (
-            <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
-              <div className="flex items-center gap-3">
-                <FileText className="h-5 w-5 text-blue-600" />
-                <div>
-                  <p className="text-sm font-medium">{transcriptFile.name}</p>
-                  <p className="text-xs text-gray-500">{formatFileSize(transcriptFile.size)}</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Generated transcript display */}
-          {hasTranscript && !transcriptFile && (
-            <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-950 rounded-lg border border-green-200 dark:border-green-800">
-              <div className="flex items-center gap-3">
-                <CheckCircle className="h-5 w-5 text-green-600" />
-                <div>
-                  <p className="text-sm font-medium">Transcript Generated</p>
-                  <p className="text-xs text-gray-500">Ready for analysis</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Transcript upload progress */}
-          {transcriptUploadProgress > 0 && transcriptUploadProgress < 100 && (
-            <div className="space-y-2">
-              <Progress value={transcriptUploadProgress} className="h-2" />
-              <p className="text-xs text-gray-500 text-center">
-                {supportMultiple && pendingTranscriptFiles ? 
-                  `Uploading ${pendingTranscriptFiles.length} transcript file${pendingTranscriptFiles.length > 1 ? 's' : ''}... ${transcriptUploadProgress}%` :
-                  `Uploading transcript... ${transcriptUploadProgress}%`
-                }
-              </p>
-              {supportMultiple && pendingTranscriptFiles && pendingTranscriptFiles.length > 10 && (
-                <div className="text-xs text-blue-600 text-center">
-                  Large batch transcript upload ({pendingTranscriptFiles.length} files)
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Transcription Action */}
-        {audioFile && !hasTranscript && (
+        {/* Transcript Status */}
+        {audioFile && (
           <div className="space-y-3">
-            <Alert>
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                No transcript detected. Click "Run Transcription" to generate transcript from audio.
-              </AlertDescription>
-            </Alert>
-            
-            <Button 
-              onClick={onTranscribe}
-              disabled={isTranscribing}
-              className="w-full"
-            >
-              {isTranscribing ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Transcribing...
-                </>
-              ) : (
-                "Run Transcription"
-              )}
-            </Button>
+            {hasTranscript ? (
+              <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-950 rounded-lg border border-green-200 dark:border-green-800">
+                <div className="flex items-center gap-3">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <div>
+                    <p className="text-sm font-medium">Транскрипт готов</p>
+                    <p className="text-xs text-gray-500">Можно переходить к оценке в любое время.</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <>
+                <Alert>
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    Транскрипт не найден. Нажмите «Запустить транскрибацию», чтобы создать текст из аудио.
+                  </AlertDescription>
+                </Alert>
+
+                <Button 
+                  onClick={onTranscribe}
+                  disabled={isTranscribing}
+                  className="w-full"
+                >
+                  {isTranscribing ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Транскрибация...
+                    </>
+                  ) : (
+                    <>
+                      <File className="h-4 w-4 mr-2" />
+                      Запустить транскрибацию
+                    </>
+                  )}
+                </Button>
+              </>
+            )}
           </div>
         )}
 
         {/* Help Text */}
         <div className="text-xs text-gray-500 bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-          <h4 className="font-medium mb-1">File Processing Tips:</h4>
+          <h4 className="font-medium mb-1">Подсказки по обработке файлов:</h4>
           <ul className="list-disc list-inside space-y-1">
             {supportMultiple ? (
               <>
-                <li><strong>Up to 200 files:</strong> Upload multiple audio/video files for batch processing</li>
-                <li>Each file will be processed individually with separate results</li>
-                <li>Transcripts can be uploaded separately or generated automatically</li>
-                <li>Large batch support: Perfect for processing 10+ files at once</li>
+                <li><strong>До 200 файлов:</strong> можно загрузить сразу много аудио или видео</li>
+                <li>Каждый файл обрабатывается отдельно с собственными результатами</li>
+                <li>Транскрипты создаются автоматически после загрузки</li>
+                <li>Подходит для больших партий: удобно обрабатывать 10+ файлов</li>
               </>
             ) : (
               <>
-                <li>Upload one audio file and optionally a transcript file</li>
-                <li>If no transcript is provided, we'll generate one automatically</li>
-                <li>Supported formats: MP3, WAV, M4A, OGG for audio</li>
+                <li>Загружайте по одному аудио-файлу за сессию</li>
+                <li>Используйте «Запустить транскрибацию» для автоматического текста</li>
+                <li>Поддерживаемые форматы: MP3, WAV, M4A, OGG</li>
               </>
             )}
-            <li>Higher quality audio produces better transcription results</li>
-            <li>Processing time depends on file length and complexity</li>
+            <li>Чем лучше качество звука, тем точнее транскрипт</li>
+            <li>Время обработки зависит от длины и сложности записи</li>
           </ul>
         </div>
       </CardContent>

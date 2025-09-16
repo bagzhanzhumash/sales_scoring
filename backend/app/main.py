@@ -11,6 +11,7 @@ import uvicorn
 
 from .api.transcription import router as transcription_router
 from .api.summarization import router as summarization_router
+from .api.analysis import router as analysis_router
 from .whisper_service import WhisperService
 from .summarization_service import SummarizationServiceError, summarization_service
 from .config import settings
@@ -83,6 +84,7 @@ app.add_middleware(
 # Include routers
 app.include_router(transcription_router)
 app.include_router(summarization_router)
+app.include_router(analysis_router)
 
 
 @app.exception_handler(HTTPException)

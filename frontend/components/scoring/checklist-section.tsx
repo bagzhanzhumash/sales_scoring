@@ -38,6 +38,20 @@ export function ChecklistSection({
   checklist,
   onChecklistUpload
 }: ChecklistSectionProps) {
+  const industryLabels: Record<string, string> = {
+    general: "Общая",
+    sales: "Продажи",
+    technology: "Технологии",
+    banking: "Банки",
+    retail: "Ритейл",
+    healthcare: "Медицина"
+  }
+
+  const criterionTypeLabels: Record<string, string> = {
+    binary: "Да/Нет",
+    scale: "Шкала",
+    percentage: "Процент"
+  }
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [newChecklist, setNewChecklist] = useState<NewChecklist>({
     name: "",
@@ -69,18 +83,56 @@ export function ChecklistSection({
       try {
         const content = e.target?.result as string
         const parsedChecklist = JSON.parse(content)
+        const timestamp = Date.now()
+        const rawCategories = Array.isArray(parsedChecklist.categories) ? parsedChecklist.categories : []
+        const normalizedCategories: ChecklistCategory[] = rawCategories.map((category: any, categoryIndex: number) => {
+          const rawCriteria = Array.isArray(category.criteria) ? category.criteria : []
+          const normalizedCriteria: ChecklistCriterion[] = rawCriteria.map((criterion: any, criterionIndex: number) => {
+            const text = criterion.text
+              || criterion.prompt
+              || criterion.question
+              || criterion.label
+              || criterion.description
+              || `Criterion ${criterionIndex + 1}`
+
+            return {
+              id: criterion.id || `criterion-${timestamp}-${categoryIndex}-${criterionIndex}`,
+              text,
+              description: criterion.description,
+              type: criterion.type || "binary",
+              max_score: typeof criterion.max_score === "number" ? criterion.max_score : 1,
+              weight: typeof criterion.weight === "number" ? criterion.weight : 1,
+              is_required: Boolean(criterion.is_required)
+            }
+          })
+          const categoryMaxScore = normalizedCriteria.reduce((acc, crit) => acc + (crit.max_score || 0), 0)
+
+          return {
+            id: category.id || `category-${timestamp}-${categoryIndex}`,
+            name: category.name || `Category ${categoryIndex + 1}`,
+            description: category.description || "",
+            weight: typeof category.weight === "number" ? category.weight : 1,
+            max_score: typeof category.max_score === "number" ? category.max_score : categoryMaxScore,
+            criteria: normalizedCriteria
+          }
+        })
+
+        const totalCriteriaCount = normalizedCategories.reduce((acc, cat) => acc + cat.criteria.length, 0)
+        const maxPossibleScore = normalizedCategories.reduce((acc, cat) => 
+          acc + cat.criteria.reduce((catAcc, crit) => catAcc + (crit.max_score || 0), 0),
+          0
+        )
         
         // Convert to proper Checklist format
         const checklist: Checklist = {
           id: `checklist-${Date.now()}`,
           name: parsedChecklist.name || file.name.replace('.json', ''),
           description: parsedChecklist.description || "",
-          industry: parsedChecklist.industry || "General",
-          categories: parsedChecklist.categories || [],
-          total_criteria_count: parsedChecklist.categories?.reduce((acc: number, cat: any) => acc + cat.criteria.length, 0) || 0,
-          categories_count: parsedChecklist.categories?.length || 0,
-          max_possible_score: parsedChecklist.categories?.reduce((acc: number, cat: any) => 
-            acc + cat.criteria.reduce((catAcc: number, crit: any) => catAcc + (crit.max_score || 1), 0), 0) || 0,
+          industry: parsedChecklist.industry || "general",
+          categories: normalizedCategories,
+          total_criteria_count: totalCriteriaCount,
+          categories_count: normalizedCategories.length,
+          max_possible_score: maxPossibleScore,
           is_template: false,
           usage_count: 0,
           version: "1.0",
@@ -164,7 +216,7 @@ export function ChecklistSection({
       id: `checklist-${Date.now()}`,
       name: newChecklist.name,
       description: newChecklist.description,
-      industry: newChecklist.industry || "General",
+      industry: newChecklist.industry || "general",
       categories: newChecklist.categories,
       total_criteria_count: newChecklist.categories.reduce((acc, cat) => acc + cat.criteria.length, 0),
       categories_count: newChecklist.categories.length,
@@ -187,7 +239,7 @@ export function ChecklistSection({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <CheckSquare className="h-5 w-5" />
-          Checklist Configuration
+          Настройки чек-листа
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -196,17 +248,17 @@ export function ChecklistSection({
             {/* Upload Checklist */}
             <div>
               <Label htmlFor="checklist-upload" className="text-sm font-medium">
-                Upload Checklist (JSON)
+                Загрузите чек-лист (JSON)
               </Label>
               <div className="mt-2">
                 <label htmlFor="checklist-upload" className="cursor-pointer">
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
                     <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Click to upload checklist JSON file
+                      Нажмите, чтобы загрузить JSON с чек-листом
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
-                      Supports JSON format with categories and criteria
+                      Поддерживается JSON с категориями и критериями
                     </p>
                   </div>
                 </label>
@@ -222,12 +274,12 @@ export function ChecklistSection({
 
             {/* Quick Templates */}
             <div>
-              <Label className="text-sm font-medium">Quick Start Templates</Label>
+              <Label className="text-sm font-medium">Быстрые шаблоны</Label>
               <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-3">
                 {[
-                  { name: "Customer Service", desc: "Standard customer service evaluation" },
-                  { name: "Sales Call", desc: "Sales conversation assessment" },
-                  { name: "Technical Support", desc: "Technical assistance evaluation" }
+                  { name: "Обслуживание клиентов", desc: "Стандартная оценка сервиса" },
+                  { name: "Продажи", desc: "Проверка звонка продавца" },
+                  { name: "Техподдержка", desc: "Оценка технической помощи" }
                 ].map((template) => (
                   <Button
                     key={template.name}
@@ -250,72 +302,72 @@ export function ChecklistSection({
                 <DialogTrigger asChild>
                   <Button className="w-full">
                     <Plus className="h-4 w-4 mr-2" />
-                    Create Custom Checklist
+                    Создать чек-лист
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
                   <DialogHeader>
-                    <DialogTitle>Create Custom Checklist</DialogTitle>
+                    <DialogTitle>Создание чек-листа</DialogTitle>
                   </DialogHeader>
                   
                   <div className="space-y-6">
                     {/* Basic Info */}
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="name">Checklist Name</Label>
+                        <Label htmlFor="name">Название чек-листа</Label>
                         <Input
                           id="name"
                           value={newChecklist.name}
                           onChange={(e) => setNewChecklist(prev => ({ ...prev, name: e.target.value }))}
-                          placeholder="e.g., Customer Service Evaluation"
+                          placeholder="Например: Оценка обслуживания"
                         />
                       </div>
                       <div>
-                        <Label htmlFor="industry">Industry</Label>
+                        <Label htmlFor="industry">Отрасль</Label>
                         <Select 
                           value={newChecklist.industry} 
                           onValueChange={(value) => setNewChecklist(prev => ({ ...prev, industry: value }))}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Select industry" />
+                            <SelectValue placeholder="Выберите отрасль" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="general">General</SelectItem>
-                            <SelectItem value="banking">Banking</SelectItem>
-                            <SelectItem value="retail">Retail</SelectItem>
-                            <SelectItem value="healthcare">Healthcare</SelectItem>
-                            <SelectItem value="technology">Technology</SelectItem>
+                            <SelectItem value="general">Общая</SelectItem>
+                            <SelectItem value="banking">Банки</SelectItem>
+                            <SelectItem value="retail">Ритейл</SelectItem>
+                            <SelectItem value="healthcare">Медицина</SelectItem>
+                            <SelectItem value="technology">Технологии</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
                     </div>
 
                     <div>
-                      <Label htmlFor="description">Description</Label>
+                      <Label htmlFor="description">Описание</Label>
                       <Textarea
                         id="description"
                         value={newChecklist.description}
                         onChange={(e) => setNewChecklist(prev => ({ ...prev, description: e.target.value }))}
-                        placeholder="Describe the purpose and scope of this checklist"
+                        placeholder="Опишите цель и область применения чек-листа"
                         rows={2}
                       />
                     </div>
 
                     {/* Add Category Section */}
                     <div className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-900">
-                      <h4 className="font-medium mb-3">Add Category</h4>
+                      <h4 className="font-medium mb-3">Добавить категорию</h4>
                       
                       <div className="grid grid-cols-2 gap-4 mb-4">
                         <div>
-                          <Label>Category Name</Label>
+                          <Label>Название категории</Label>
                           <Input
                             value={currentCategory.name || ""}
                             onChange={(e) => setCurrentCategory(prev => ({ ...prev, name: e.target.value }))}
-                            placeholder="e.g., Beginning, Middle, End"
+                            placeholder="Например: Начало, Средина, Завершение"
                           />
                         </div>
                         <div>
-                          <Label>Weight</Label>
+                          <Label>Вес</Label>
                           <Input
                             type="number"
                             min="1"
@@ -328,14 +380,14 @@ export function ChecklistSection({
 
                       {/* Add Criteria */}
                       <div className="space-y-3">
-                        <h5 className="text-sm font-medium">Add Criteria</h5>
+                        <h5 className="text-sm font-medium">Добавить критерии</h5>
                         
                         <div className="grid grid-cols-3 gap-3">
                           <div>
                             <Input
                               value={currentCriterion.text || ""}
                               onChange={(e) => setCurrentCriterion(prev => ({ ...prev, text: e.target.value }))}
-                              placeholder="Criterion description"
+                              placeholder="Описание критерия"
                             />
                           </div>
                           <div>
@@ -347,9 +399,9 @@ export function ChecklistSection({
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="binary">Yes/No</SelectItem>
-                                <SelectItem value="scale">Scale (1-5)</SelectItem>
-                                <SelectItem value="percentage">Percentage</SelectItem>
+                                <SelectItem value="binary">Да/Нет</SelectItem>
+                                <SelectItem value="scale">Шкала (1-5)</SelectItem>
+                                <SelectItem value="percentage">Процент</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -367,11 +419,11 @@ export function ChecklistSection({
                         {/* Current Criteria List */}
                         {currentCategory.criteria && currentCategory.criteria.length > 0 && (
                           <div className="space-y-2">
-                            <Label className="text-xs text-gray-500">Current Criteria:</Label>
+                            <Label className="text-xs text-gray-500">Текущие критерии:</Label>
                             {currentCategory.criteria.map((criterion, index) => (
                               <div key={index} className="flex items-center justify-between text-sm bg-white dark:bg-gray-800 p-2 rounded">
                                 <span>{criterion.text}</span>
-                                <Badge variant="secondary">{criterion.type}</Badge>
+                                <Badge variant="secondary">{criterionTypeLabels[criterion.type || ""] || criterion.type}</Badge>
                               </div>
                             ))}
                           </div>
@@ -384,21 +436,21 @@ export function ChecklistSection({
                         className="mt-4"
                         size="sm"
                       >
-                        Add Category
+                        Добавить категорию
                       </Button>
                     </div>
 
                     {/* Current Categories */}
                     {newChecklist.categories.length > 0 && (
                       <div>
-                        <Label className="text-sm font-medium">Categories ({newChecklist.categories.length})</Label>
+                        <Label className="text-sm font-medium">Категории ({newChecklist.categories.length})</Label>
                         <div className="mt-2 space-y-2">
                           {newChecklist.categories.map((category, index) => (
                             <div key={index} className="flex items-center justify-between p-3 border rounded">
                               <div>
                                 <div className="font-medium">{category.name}</div>
                                 <div className="text-sm text-gray-500">
-                                  {category.criteria.length} criteria
+                                  {category.criteria.length} критериев
                                 </div>
                               </div>
                               <Badge>{category.criteria.length}</Badge>
@@ -414,13 +466,13 @@ export function ChecklistSection({
                         variant="outline" 
                         onClick={() => setIsCreateModalOpen(false)}
                       >
-                        Cancel
+                        Отмена
                       </Button>
                       <Button 
                         onClick={saveNewChecklist}
                         disabled={!newChecklist.name || !newChecklist.categories.length}
                       >
-                        Create Checklist
+                        Создать чек-лист
                       </Button>
                     </div>
                   </div>
@@ -437,36 +489,50 @@ export function ChecklistSection({
                 <div>
                   <p className="font-medium">{checklist.name}</p>
                   <p className="text-sm text-gray-500">
-                    {checklist.categories_count} categories, {checklist.total_criteria_count} criteria
+                    {checklist.categories_count} категорий, {checklist.total_criteria_count} критериев
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant="secondary">{checklist.industry}</Badge>
-                <Badge>{checklist.max_possible_score} points</Badge>
+                <Badge variant="secondary">{industryLabels[checklist.industry?.toLowerCase?.() || ""] || checklist.industry}</Badge>
+                <Badge>{checklist.max_possible_score} баллов</Badge>
               </div>
             </div>
 
             {/* Checklist Preview */}
             <div className="space-y-3">
-              <Label className="text-sm font-medium">Checklist Preview</Label>
+              <Label className="text-sm font-medium">Предпросмотр чек-листа</Label>
               <div className="space-y-3 max-h-64 overflow-y-auto">
                 {checklist.categories.map((category, categoryIndex) => (
                   <div key={categoryIndex} className="border rounded-lg p-3">
                     <div className="flex items-center justify-between mb-2">
                       <h4 className="font-medium">{category.name}</h4>
-                      <Badge variant="outline">{category.criteria.length} items</Badge>
+                      <Badge variant="outline">{category.criteria.length} пунктов</Badge>
                     </div>
                     <div className="space-y-1">
-                      {category.criteria.map((criterion, criterionIndex) => (
-                        <div key={criterionIndex} className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                          <div className="w-2 h-2 bg-gray-300 rounded-full" />
-                          <span>{criterion.text}</span>
-                          <Badge variant="secondary" className="text-xs">
-                            {criterion.type}
-                          </Badge>
-                        </div>
-                      ))}
+                      {category.criteria.map((criterion, criterionIndex) => {
+                        const label = criterion.text || criterion.description || `Criterion ${criterionIndex + 1}`
+                        return (
+                          <div key={criterionIndex} className="flex items-start justify-between gap-2 text-sm text-gray-600 dark:text-gray-400">
+                            <div className="flex items-start gap-2">
+                              <div className="mt-2 w-2 h-2 bg-gray-300 rounded-full" />
+                              <div>
+                                <span className="font-medium text-gray-700 dark:text-gray-300">
+                                  {label}
+                                </span>
+                                {criterion.description && criterion.description !== label && (
+                                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                                    {criterion.description}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            <Badge variant="secondary" className="text-xs whitespace-nowrap">
+                              {criterionTypeLabels[criterion.type || ""] || criterion.type}
+                            </Badge>
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
                 ))}
@@ -476,7 +542,7 @@ export function ChecklistSection({
             <Alert>
               <Info className="h-4 w-4" />
               <AlertDescription>
-                Checklist loaded successfully. Ready for analysis when transcript is available.
+                Чек-лист загружен. Анализ станет доступен, когда появится транскрипт.
               </AlertDescription>
             </Alert>
           </div>
@@ -489,70 +555,70 @@ export function ChecklistSection({
 // Helper function to generate template checklists
 function getChecklistTemplate(templateName: string): Checklist {
   const templates = {
-    "Customer Service": {
-      name: "Customer Service Evaluation",
-      description: "Standard evaluation criteria for customer service calls",
+    "Обслуживание клиентов": {
+      name: "Оценка обслуживания клиентов",
+      description: "Стандартные критерии для звонков в поддержку",
       industry: "general",
       categories: [
         {
           id: "opening",
-          name: "Call Opening",
-          description: "Initial greeting and identification",
+          name: "Начало звонка",
+          description: "Приветствие и идентификация",
           weight: 1,
           max_score: 4,
           criteria: [
-            { id: "greeting", text: "Professional greeting", type: "binary" as const, max_score: 1, weight: 1, is_required: true },
-            { id: "identification", text: "Agent identification", type: "binary" as const, max_score: 1, weight: 1, is_required: true },
-            { id: "purpose", text: "Call purpose clarification", type: "binary" as const, max_score: 1, weight: 1, is_required: false },
-            { id: "recording_notice", text: "Recording notification", type: "binary" as const, max_score: 1, weight: 1, is_required: true }
+            { id: "greeting", text: "Профессиональное приветствие", type: "binary" as const, max_score: 1, weight: 1, is_required: true },
+            { id: "identification", text: "Представился оператор", type: "binary" as const, max_score: 1, weight: 1, is_required: true },
+            { id: "purpose", text: "Озвучена цель звонка", type: "binary" as const, max_score: 1, weight: 1, is_required: false },
+            { id: "recording_notice", text: "Сообщение о записи разговора", type: "binary" as const, max_score: 1, weight: 1, is_required: true }
           ]
         },
         {
           id: "conversation",
-          name: "Conversation Flow",
-          description: "Main conversation handling",
+          name: "Ход разговора",
+          description: "Основная часть общения",
           weight: 2,
           max_score: 6,
           criteria: [
-            { id: "active_listening", text: "Active listening demonstrated", type: "scale" as const, max_score: 3, weight: 1, is_required: true },
-            { id: "problem_solving", text: "Effective problem solving", type: "scale" as const, max_score: 3, weight: 1, is_required: true }
+            { id: "active_listening", text: "Активное слушание", type: "scale" as const, max_score: 3, weight: 1, is_required: true },
+            { id: "problem_solving", text: "Эффективное решение проблемы", type: "scale" as const, max_score: 3, weight: 1, is_required: true }
           ]
         }
       ]
     },
-    "Sales Call": {
-      name: "Sales Call Assessment",
-      description: "Evaluation criteria for sales conversations",
+    "Продажи": {
+      name: "Оценка продаж",
+      description: "Критерии для разговоров менеджеров по продажам",
       industry: "sales",
       categories: [
         {
           id: "discovery",
-          name: "Discovery Phase",
-          description: "Customer needs assessment",
+          name: "Выявление потребностей",
+          description: "Работа с клиентскими запросами",
           weight: 1,
           max_score: 3,
           criteria: [
-            { id: "needs_analysis", text: "Customer needs analysis", type: "binary" as const, max_score: 1, weight: 1, is_required: true },
-            { id: "qualification", text: "Lead qualification", type: "binary" as const, max_score: 1, weight: 1, is_required: true },
-            { id: "budget_discussion", text: "Budget discussion", type: "binary" as const, max_score: 1, weight: 1, is_required: false }
+            { id: "needs_analysis", text: "Выявлены потребности клиента", type: "binary" as const, max_score: 1, weight: 1, is_required: true },
+            { id: "qualification", text: "Проведена квалификация лида", type: "binary" as const, max_score: 1, weight: 1, is_required: true },
+            { id: "budget_discussion", text: "Обсуждён бюджет", type: "binary" as const, max_score: 1, weight: 1, is_required: false }
           ]
         }
       ]
     },
-    "Technical Support": {
-      name: "Technical Support Evaluation",
-      description: "Assessment for technical assistance calls",
+    "Техподдержка": {
+      name: "Оценка технической поддержки",
+      description: "Критерии для звонков в техническую поддержку",
       industry: "technology",
       categories: [
         {
           id: "technical",
-          name: "Technical Competency",
-          description: "Technical problem resolution",
+          name: "Техническая компетентность",
+          description: "Решение технической задачи",
           weight: 1,
           max_score: 4,
           criteria: [
-            { id: "problem_diagnosis", text: "Problem diagnosis", type: "scale" as const, max_score: 2, weight: 1, is_required: true },
-            { id: "solution_provided", text: "Solution provided", type: "scale" as const, max_score: 2, weight: 1, is_required: true }
+            { id: "problem_diagnosis", text: "Диагностика проблемы", type: "scale" as const, max_score: 2, weight: 1, is_required: true },
+            { id: "solution_provided", text: "Предложено решение", type: "scale" as const, max_score: 2, weight: 1, is_required: true }
           ]
         }
       ]

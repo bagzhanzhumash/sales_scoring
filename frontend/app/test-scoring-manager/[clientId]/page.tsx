@@ -144,6 +144,7 @@ interface TranscriptionSegment {
   start: number
   end: number
   text: string
+  speaker?: string
 }
 
 interface TranscriptionResponse {
@@ -160,8 +161,9 @@ interface SummarizeResponse {
   scorecards: SummaryData["scorecards"]
 }
 
-const TRANSCRIBE_ENDPOINT = process.env.NEXT_PUBLIC_TRANSCRIBE_URL || "http://localhost:8001/transcribe"
-const SUMMARIZE_ENDPOINT = process.env.NEXT_PUBLIC_SUMMARIZE_URL || "http://localhost:8002/summarize"
+const API_BASE_URL = process.env.NEXT_PUBLIC_SCORING_API_URL || "http://localhost:8000/api/v1"
+const TRANSCRIBE_ENDPOINT = process.env.NEXT_PUBLIC_TRANSCRIBE_URL || `${API_BASE_URL}/transcribe`
+const SUMMARIZE_ENDPOINT = process.env.NEXT_PUBLIC_SUMMARIZE_URL || `${API_BASE_URL}/summarize/call`
 
 const buildManagerRecommendations = (client: ClientRecord, summary: SummaryData | null): string[] => {
   const summaryRecs = summary?.callSummary.managerRecommendations || summary?.sentiment.managerRecommendations
@@ -335,13 +337,25 @@ export default function ClientScoringPage() {
     const segmentsFromStt = transcription?.segments ?? []
 
     const diarizedSegments: DiarizedSegment[] = segmentsFromStt.length
-      ? segmentsFromStt.map((segment, index) => ({
-          id: `seg-${segment.id}`,
-          speaker: index % 2 === 0 ? "Agent" : "Customer",
-          start: segment.start,
-          end: segment.end,
-          text: segment.text.trim()
-        }))
+      ? segmentsFromStt.map((segment, index) => {
+          const rawSpeaker = (segment as { speaker?: string }).speaker
+          const normalizedSpeaker = typeof rawSpeaker === "string"
+            ? rawSpeaker.toLowerCase().includes("cust")
+              ? "Customer"
+              : "Agent"
+            : index % 2 === 0
+              ? "Agent"
+              : "Customer"
+          const segmentId = typeof segment.id === "number" ? segment.id : index
+
+          return {
+            id: `seg-${segmentId}`,
+            speaker: normalizedSpeaker,
+            start: typeof segment.start === "number" ? segment.start : index,
+            end: typeof segment.end === "number" ? segment.end : index + 1,
+            text: (segment.text || "").trim()
+          }
+        })
       : [
           {
             id: "seg-0",

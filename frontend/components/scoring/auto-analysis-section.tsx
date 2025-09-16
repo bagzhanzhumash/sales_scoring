@@ -54,6 +54,12 @@ export function AutoAnalysisSection({
   const [editExplanation, setEditExplanation] = useState("")
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
 
+  const criterionTypeLabels: Record<string, string> = {
+    binary: "Да/Нет",
+    scale: "Шкала",
+    percentage: "Процент"
+  }
+
   const toggleCategory = useCallback((categoryId: string) => {
     setExpandedCategories(prev => {
       const newSet = new Set(prev)
@@ -122,11 +128,11 @@ export function AutoAnalysisSection({
   const needsReviewCount = analysisResults.filter(r => r.needsReview).length
 
   return (
-    <Card>
+    <Card className="h-full">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Brain className="h-5 w-5" />
-          AI Analysis
+          ИИ-анализ
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -134,14 +140,14 @@ export function AutoAnalysisSection({
         <div className="flex items-center justify-between">
           <div className="space-y-1">
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              Analyze transcript against checklist criteria using AI
+              Сравните транскрипт с чек-листом с помощью ИИ
             </p>
             {analysisResults.length > 0 && (
               <div className="flex items-center gap-4 text-xs text-gray-500">
-                <span>{completedCriteria}/{totalCriteria} analyzed</span>
-                <span>{highConfidenceCriteria} high confidence</span>
+                <span>{completedCriteria}/{totalCriteria} обработано</span>
+                <span>{highConfidenceCriteria} с высокой уверенностью</span>
                 {needsReviewCount > 0 && (
-                  <span className="text-yellow-600">{needsReviewCount} need review</span>
+                  <span className="text-yellow-600">{needsReviewCount} требуют проверки</span>
                 )}
               </div>
             )}
@@ -155,12 +161,12 @@ export function AutoAnalysisSection({
             {isAnalyzing ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Analyzing...
+                Анализируем...
               </>
             ) : (
               <>
                 <Sparkles className="h-4 w-4" />
-                {analysisResults.length > 0 ? "Re-analyze" : "Start Analysis"}
+                {analysisResults.length > 0 ? "Повторить анализ" : "Запустить анализ"}
               </>
             )}
           </Button>
@@ -171,37 +177,37 @@ export function AutoAnalysisSection({
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin" />
-              <span className="text-sm">AI is analyzing the transcript...</span>
+              <span className="text-sm">ИИ анализирует транскрипт...</span>
             </div>
             <Progress value={65} className="h-2" />
             <p className="text-xs text-gray-500 text-center">
-              This may take up to 30 seconds depending on transcript length
+              Это может занять до 30 секунд в зависимости от длины записи
             </p>
           </div>
         )}
 
         {/* Analysis Results */}
         {analysisResults.length > 0 && !isAnalyzing && (
-          <div className="space-y-4">
+          <div className="max-h-[32rem] space-y-4 overflow-y-auto pr-2">
             {/* Summary Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
                 <div className="text-2xl font-bold text-blue-600">{completedCriteria}</div>
-                <div className="text-xs text-gray-600 dark:text-gray-400">Analyzed</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">Проанализировано</div>
               </div>
               <div className="text-center p-3 bg-green-50 dark:bg-green-950 rounded-lg">
                 <div className="text-2xl font-bold text-green-600">{highConfidenceCriteria}</div>
-                <div className="text-xs text-gray-600 dark:text-gray-400">High Confidence</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">Высокая уверенность</div>
               </div>
               <div className="text-center p-3 bg-yellow-50 dark:bg-yellow-950 rounded-lg">
                 <div className="text-2xl font-bold text-yellow-600">{needsReviewCount}</div>
-                <div className="text-xs text-gray-600 dark:text-gray-400">Need Review</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">Нужна проверка</div>
               </div>
               <div className="text-center p-3 bg-purple-50 dark:bg-purple-950 rounded-lg">
                 <div className="text-2xl font-bold text-purple-600">
                   {Math.round((completedCriteria / totalCriteria) * 100)}%
                 </div>
-                <div className="text-xs text-gray-600 dark:text-gray-400">Complete</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">Готовность</div>
               </div>
             </div>
 
@@ -227,7 +233,7 @@ export function AutoAnalysisSection({
                             )}
                             <h3 className="font-medium">{category.name}</h3>
                             <Badge variant="outline">
-                              {categoryResults.length} criteria
+                              {categoryResults.length} критериев
                             </Badge>
                           </div>
                           
@@ -263,19 +269,19 @@ export function AutoAnalysisSection({
                                     <h4 className="font-medium text-sm">{criterion?.text}</h4>
                                     <div className="flex items-center gap-2 mt-1">
                                       <Badge variant="secondary" className="text-xs">
-                                        {criterion?.type}
+                                        {criterionTypeLabels[criterion?.type || ""] || criterion?.type}
                                       </Badge>
                                       <span className={`text-xs font-medium ${getConfidenceColor(result.confidence)}`}>
-                                        {result.confidence}% confidence
+                                        Уверенность {result.confidence}%
                                       </span>
                                       {result.isEdited && (
                                         <Badge variant="outline" className="text-xs">
-                                          Edited
+                                          Изменено
                                         </Badge>
                                       )}
                                       {result.needsReview && (
                                         <Badge variant="destructive" className="text-xs">
-                                          Review needed
+                                          Нужна проверка
                                         </Badge>
                                       )}
                                     </div>
@@ -296,7 +302,7 @@ export function AutoAnalysisSection({
 
                                 {/* Score Controls */}
                                 <div className="flex items-center gap-2 mb-3">
-                                  <span className="text-xs text-gray-600 dark:text-gray-400">Score:</span>
+                                  <span className="text-xs text-gray-600 dark:text-gray-400">Оценка:</span>
                                   {[1, 0, "?"].map((score) => (
                                     <Button
                                       key={score}
@@ -312,14 +318,14 @@ export function AutoAnalysisSection({
 
                                 {/* Explanation */}
                                 <div className="space-y-2">
-                                  <span className="text-xs text-gray-600 dark:text-gray-400">AI Explanation:</span>
+                                  <span className="text-xs text-gray-600 dark:text-gray-400">Комментарий ИИ:</span>
                                   {isEditing ? (
                                     <div className="space-y-2">
                                       <Textarea
                                         value={editExplanation}
                                         onChange={(e) => setEditExplanation(e.target.value)}
                                         className="min-h-[80px] text-sm"
-                                        placeholder="Edit the explanation..."
+                                        placeholder="Измените пояснение..."
                                       />
                                       <div className="flex gap-2">
                                         <Button
@@ -327,14 +333,14 @@ export function AutoAnalysisSection({
                                           onClick={() => saveEdit(result.criterionId, result.categoryId)}
                                         >
                                           <Save className="h-3 w-3 mr-1" />
-                                          Save
+                                          Сохранить
                                         </Button>
                                         <Button
                                           variant="outline"
                                           size="sm"
                                           onClick={cancelEdit}
                                         >
-                                          Cancel
+                                          Отмена
                                         </Button>
                                       </div>
                                     </div>
@@ -356,24 +362,24 @@ export function AutoAnalysisSection({
             </div>
 
             {/* Analysis Summary */}
-            <Alert>
-              <BarChart3 className="h-4 w-4" />
-              <AlertDescription>
-                Analysis complete! Review the results above and make any necessary adjustments. 
-                Items marked for review may need manual verification.
-              </AlertDescription>
-            </Alert>
-          </div>
-        )}
+          <Alert>
+            <BarChart3 className="h-4 w-4" />
+            <AlertDescription>
+              Анализ завершён! Проверьте результаты выше и при необходимости скорректируйте оценки. 
+              Пункты с отметкой «проверить» желательно подтвердить вручную.
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
 
-        {/* Empty State */}
-        {analysisResults.length === 0 && !isAnalyzing && (
-          <div className="text-center py-8 text-gray-500">
-            <Brain className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-            <p>Click "Start Analysis" to begin AI evaluation</p>
-            <p className="text-sm mt-1">The AI will analyze the transcript against each checklist criterion</p>
-          </div>
-        )}
+      {/* Empty State */}
+      {analysisResults.length === 0 && !isAnalyzing && (
+        <div className="text-center py-8 text-gray-500">
+          <Brain className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+          <p>Нажмите «Запустить анализ», чтобы начать оценку</p>
+          <p className="text-sm mt-1">ИИ сравнит транскрипт с каждым пунктом чек-листа</p>
+        </div>
+      )}
       </CardContent>
     </Card>
   )

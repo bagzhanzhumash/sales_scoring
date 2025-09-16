@@ -56,6 +56,10 @@ export function TranscriptViewer({
   transcriptData,
   audioFile
 }: TranscriptViewerProps) {
+  const speakerLabels: Record<TranscriptSegment["speaker"], string> = {
+    Operator: "Оператор",
+    Client: "Клиент"
+  }
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
@@ -127,7 +131,7 @@ export function TranscriptViewer({
     const handleLoadStart = () => setIsLoading(true)
     const handleCanPlay = () => setIsLoading(false)
     const handleError = () => {
-      setError("Failed to load audio file. Please check the file format.")
+      setError("Не удалось загрузить аудио. Проверьте формат записи.")
       setIsLoading(false)
       setIsPlaying(false)
     }
@@ -202,7 +206,7 @@ export function TranscriptViewer({
       audio.pause()
     } else {
       audio.play().catch(() => {
-        setError("Unable to play audio. Please try again.")
+        setError("Не удаётся воспроизвести аудио. Попробуйте ещё раз.")
       })
     }
     setIsPlaying(!isPlaying)
@@ -295,11 +299,11 @@ export function TranscriptViewer({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <MessageSquare className="h-5 w-5" />
-          Transcript Viewer
+          Просмотр транскрипта
           {audioFile && (
             <Badge variant="secondary" className="ml-auto">
               <Headphones className="h-3 w-3 mr-1" />
-              Audio Sync
+              Синхронизировано
             </Badge>
           )}
         </CardTitle>
@@ -328,20 +332,20 @@ export function TranscriptViewer({
                 <Headphones className="h-4 w-4" />
                 <span className="font-medium">{audioFile.name}</span>
                 <Badge variant="secondary" className="text-xs">
-                  {(audioFile.size / 1024 / 1024).toFixed(1)}MB
+                  {(audioFile.size / 1024 / 1024).toFixed(1)} МБ
                 </Badge>
               </div>
               <div className="flex items-center gap-2">
                 {isLoading && (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>Loading audio...</span>
+                    <span>Загрузка аудио...</span>
                   </>
                 )}
                 {isLoopingSegment && loopSegment && (
                   <Badge variant="outline" className="text-xs">
                     <Repeat className="h-3 w-3 mr-1" />
-                    Looping segment
+                    Повтор участка
                   </Badge>
                 )}
               </div>
@@ -356,7 +360,7 @@ export function TranscriptViewer({
                   size="sm"
                   onClick={restart}
                   disabled={!audioFile || isLoading}
-                  title="Restart (R)"
+                  title="Сначала (R)"
                 >
                   <RotateCcw className="h-4 w-4" />
                 </Button>
@@ -366,7 +370,7 @@ export function TranscriptViewer({
                   size="sm"
                   onClick={skipBackward}
                   disabled={!audioFile || isLoading}
-                  title="Skip backward 10s (←)"
+                  title="Назад 10с (←)"
                 >
                   <SkipBack className="h-4 w-4" />
                 </Button>
@@ -376,7 +380,7 @@ export function TranscriptViewer({
                   disabled={!audioFile || isLoading}
                   size="sm"
                   className="w-12 h-12"
-                  title="Play/Pause (Space)"
+                  title="Старт/пауза (Пробел)"
                 >
                   {isLoading ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
@@ -392,7 +396,7 @@ export function TranscriptViewer({
                   size="sm"
                   onClick={skipForward}
                   disabled={!audioFile || isLoading}
-                  title="Skip forward 10s (→)"
+                  title="Вперёд 10с (→)"
                 >
                   <SkipForward className="h-4 w-4" />
                 </Button>
@@ -402,7 +406,7 @@ export function TranscriptViewer({
                   size="sm"
                   onClick={toggleSegmentLoop}
                   disabled={!audioFile || !activeSegment}
-                  title="Loop current segment (L)"
+                  title="Повторить текущий фрагмент (L)"
                 >
                   <Repeat className="h-4 w-4" />
                 </Button>
@@ -425,7 +429,7 @@ export function TranscriptViewer({
                   size="sm"
                   onClick={toggleMute}
                   disabled={!audioFile}
-                  title="Mute/Unmute (M)"
+                  title="Вкл/выкл звук (M)"
                 >
                   {isMuted ? (
                     <VolumeX className="h-4 w-4" />
@@ -450,7 +454,7 @@ export function TranscriptViewer({
                   onChange={(e) => changePlaybackSpeed(Number(e.target.value))}
                   className="text-xs bg-white dark:bg-gray-800 border rounded px-2 py-1"
                   disabled={!audioFile}
-                  title="Playback speed"
+                  title="Скорость воспроизведения"
                 >
                   <option value={0.5}>0.5x</option>
                   <option value={0.75}>0.75x</option>
@@ -464,7 +468,7 @@ export function TranscriptViewer({
                   variant="outline"
                   size="sm"
                   onClick={() => setShowKeyboardShortcuts(!showKeyboardShortcuts)}
-                  title="Keyboard shortcuts (?)"
+                  title="Горячие клавиши (?)"
                 >
                   <Keyboard className="h-4 w-4" />
                 </Button>
@@ -473,14 +477,14 @@ export function TranscriptViewer({
               {/* Keyboard Shortcuts Help */}
               {showKeyboardShortcuts && (
                 <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
-                  <h4 className="font-medium text-sm mb-2 text-blue-900 dark:text-blue-100">Keyboard Shortcuts:</h4>
+                  <h4 className="font-medium text-sm mb-2 text-blue-900 dark:text-blue-100">Горячие клавиши:</h4>
                   <div className="grid grid-cols-2 gap-2 text-xs text-blue-800 dark:text-blue-200">
-                    <div><kbd className="bg-blue-100 dark:bg-blue-900 px-1 rounded">Space</kbd> Play/Pause</div>
-                    <div><kbd className="bg-blue-100 dark:bg-blue-900 px-1 rounded">←/→</kbd> Skip 10s</div>
-                    <div><kbd className="bg-blue-100 dark:bg-blue-900 px-1 rounded">M</kbd> Mute/Unmute</div>
-                    <div><kbd className="bg-blue-100 dark:bg-blue-900 px-1 rounded">L</kbd> Loop segment</div>
-                    <div><kbd className="bg-blue-100 dark:bg-blue-900 px-1 rounded">R</kbd> Restart</div>
-                    <div><kbd className="bg-blue-100 dark:bg-blue-900 px-1 rounded">?</kbd> Show shortcuts</div>
+                    <div><kbd className="bg-blue-100 dark:bg-blue-900 px-1 rounded">Space</kbd> Старт/пауза</div>
+                    <div><kbd className="bg-blue-100 dark:bg-blue-900 px-1 rounded">←/→</kbd> Перемотка 10с</div>
+                    <div><kbd className="bg-blue-100 dark:bg-blue-900 px-1 rounded">M</kbd> Вкл/выкл звук</div>
+                    <div><kbd className="bg-blue-100 dark:bg-blue-900 px-1 rounded">L</kbd> Повтор участка</div>
+                    <div><kbd className="bg-blue-100 dark:bg-blue-900 px-1 rounded">R</kbd> С начала</div>
+                    <div><kbd className="bg-blue-100 dark:bg-blue-900 px-1 rounded">?</kbd> Показать подсказки</div>
                   </div>
                 </div>
               )}
@@ -523,25 +527,25 @@ export function TranscriptViewer({
                   {/* Speaker and Timestamp */}
                   <div className="flex items-center gap-2 mb-2">
                     <span className="font-semibold text-sm">
-                      {segment.speaker}
+                      {speakerLabels[segment.speaker]}
                     </span>
                     <div className="flex items-center gap-1 text-xs text-gray-500">
                       <Clock className="h-3 w-3" />
                       <span>{segment.timestamp}</span>
                       <span className="text-gray-400">•</span>
-                      <span>{formatTime(segment.endTime - segment.startTime)} duration</span>
+                      <span>{formatTime(segment.endTime - segment.startTime)} длительность</span>
                     </div>
                     <div className="flex items-center gap-1 ml-auto">
                       {activeSegment === segment.id && (
                         <Badge variant="default" className="text-xs animate-pulse">
                           <Play className="h-3 w-3 mr-1" />
-                          Now Playing
+                          Воспроизведение
                         </Badge>
                       )}
                       {isLoopingSegment && loopSegment?.id === segment.id && (
                         <Badge variant="secondary" className="text-xs">
                           <Repeat className="h-3 w-3 mr-1" />
-                          Looping
+                          Повтор
                         </Badge>
                       )}
                     </div>
@@ -564,7 +568,7 @@ export function TranscriptViewer({
                       }}
                     >
                       <Play className="h-3 w-3 mr-1" />
-                      Play
+                      Воспроизвести
                     </Button>
                     <Button
                       variant="outline"
@@ -578,7 +582,7 @@ export function TranscriptViewer({
                       }}
                     >
                       <Repeat className="h-3 w-3 mr-1" />
-                      Loop
+                      Повторить
                     </Button>
                   </div>
                 </div>
@@ -596,26 +600,26 @@ export function TranscriptViewer({
         <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg space-y-3 border-t">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-6 text-sm">
-              <div className="flex items-center gap-2">
-                <MessageSquare className="h-4 w-4 text-gray-500" />
-                <span className="font-medium">{transcriptData.segments.length}</span>
-                <span className="text-gray-500">segments</span>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                  <span>{transcriptData.segments.filter(s => s.speaker === 'Operator').length} operator</span>
+             <div className="flex items-center gap-2">
+               <MessageSquare className="h-4 w-4 text-gray-500" />
+               <span className="font-medium">{transcriptData.segments.length}</span>
+                <span className="text-gray-500">сегментов</span>
+             </div>
+             <div className="flex items-center gap-4">
+               <div className="flex items-center gap-2">
+                 <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                  <span>{transcriptData.segments.filter(s => s.speaker === 'Operator').length} оператор</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                  <span>{transcriptData.segments.filter(s => s.speaker === 'Client').length} client</span>
+                  <span>{transcriptData.segments.filter(s => s.speaker === 'Client').length} клиент</span>
                 </div>
               </div>
               {duration > 0 && (
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-gray-500" />
                   <span className="font-medium">{formatTime(duration)}</span>
-                  <span className="text-gray-500">total</span>
+                  <span className="text-gray-500">всего</span>
                 </div>
               )}
             </div>
@@ -624,12 +628,12 @@ export function TranscriptViewer({
               {audioFile ? (
                 <Badge variant="default" className="bg-green-100 text-green-700 border-green-200">
                   <Headphones className="h-3 w-3 mr-1" />
-                  Audio synced
+                  Аудио синхронизировано
                 </Badge>
               ) : (
                 <Badge variant="secondary">
                   <MessageSquare className="h-3 w-3 mr-1" />
-                  Text only
+                  Только текст
                 </Badge>
               )}
             </div>
@@ -640,19 +644,19 @@ export function TranscriptViewer({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-gray-600 dark:text-gray-400">
               <div className="flex items-center gap-2">
                 <Play className="h-3 w-3" />
-                <span>Click segments to jump to specific parts</span>
+                <span>Нажимайте на сегменты, чтобы перейти к нужной части</span>
               </div>
               <div className="flex items-center gap-2">
                 <Repeat className="h-3 w-3" />
-                <span>Use loop button to repeat segments</span>
+                <span>Используйте кнопку повтора для цикла сегмента</span>
               </div>
               <div className="flex items-center gap-2">
                 <Keyboard className="h-3 w-3" />
-                <span>Press <kbd className="bg-gray-200 dark:bg-gray-700 px-1 rounded">?</kbd> for shortcuts</span>
+                <span>Нажмите <kbd className="bg-gray-200 dark:bg-gray-700 px-1 rounded">?</kbd>, чтобы увидеть горячие клавиши</span>
               </div>
               <div className="flex items-center gap-2">
                 <MoreHorizontal className="h-3 w-3" />
-                <span>Hover segments for quick actions</span>
+                <span>Наведите курсор на сегмент для быстрых действий</span>
               </div>
             </div>
           )}

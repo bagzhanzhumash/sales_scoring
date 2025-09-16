@@ -24,14 +24,12 @@ import { AlertTriangle, RefreshCw, Sparkles, MessageSquare, FileAudio, FileText,
 import { useToast } from "@/hooks/use-toast"
 import type { Checklist, Project, AudioFile, AnalysisResult } from "@/types/projects"
 import * as scoringAPI from "@/lib/api/scoring"
-import { ReadyTranscriptUploader } from "@/components/scoring/ready-transcript-uploader"
 
 interface FileSession {
   id: string
   projectId?: string
   audioFile?: File
   audioFileId?: string
-  transcriptFile?: File
   transcriptionId?: string
   transcriptData?: any
   analysisResults: any[]
@@ -48,6 +46,17 @@ interface BatchProgress {
   current: number
   total: number
   currentFile?: string
+}
+
+const statusLabels: Record<FileSession["status"], string> = {
+  pending: "В ожидании",
+  uploading: "Загрузка",
+  uploaded: "Загружено",
+  transcribing: "Транскрибация",
+  transcribed: "С транскриптом",
+  analyzing: "Анализ",
+  analyzed: "Проанализировано",
+  failed: "Ошибка"
 }
 
 export default function ScoringPage() {
@@ -84,14 +93,14 @@ export default function ScoringPage() {
       setCurrentProject(project)
       
       toast({
-        title: "Project created",
-        description: `Created project: ${project.name}`
+        title: "Проект создан",
+        description: `Создан проект: ${project.name}`
       })
     } catch (error) {
       console.error("Failed to create project:", error)
       toast({
-        title: "Error",
-        description: "Failed to create project",
+        title: "Ошибка",
+        description: "Не удалось создать проект",
         variant: "destructive"
       })
     }
@@ -112,7 +121,6 @@ export default function ScoringPage() {
           file: undefined // Not available, but can be used for download if needed
         },
         audioFileId: file.id,
-        transcriptFile: undefined,
         transcriptionId: file.transcription?.id,
         transcriptData: file.transcription ? {
           text: file.transcription.text,
@@ -132,7 +140,7 @@ export default function ScoringPage() {
       })))
     } catch (error) {
       toast({
-        title: "Failed to fetch files",
+        title: "Не удалось получить файлы",
         description: error instanceof Error ? error.message : String(error),
         variant: "destructive"
       })
@@ -148,8 +156,8 @@ export default function ScoringPage() {
   const handleAudioUpload = useCallback(async (files: File | File[]) => {
     if (!currentProject) {
       toast({
-        title: "No project",
-        description: "Please wait for project initialization",
+        title: "Нет проекта",
+        description: "Подождите завершения инициализации проекта",
         variant: "destructive"
       })
       return
@@ -214,7 +222,7 @@ export default function ScoringPage() {
                ? { 
                    ...session, 
                    status: "failed" as const,
-                   error: `Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+                   error: `Ошибка загрузки: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`
                  }
                : session
            ))
@@ -224,80 +232,26 @@ export default function ScoringPage() {
       setBatchProgress(null)
       
       toast({
-        title: "Upload complete",
-        description: `${fileArray.length} file(s) uploaded successfully`
+        title: "Загрузка завершена",
+        description: `${fileArray.length} файл(ов) успешно загружено`
       })
     } catch (error) {
       setBatchProgress(null)
       toast({
-        title: "Upload failed",
-        description: "There was an error uploading files",
+        title: "Ошибка загрузки",
+        description: "Произошла ошибка при загрузке файлов",
         variant: "destructive"
       })
     }
   }, [currentProject, toast])
-
-  const handleTranscriptUpload = useCallback(async (files: File | File[]) => {
-    const fileArray = Array.isArray(files) ? files : [files];
-    for (let i = 0; i < fileArray.length; i++) {
-      const file = fileArray[i];
-      // Find the session by file name (or other logic)
-      const session = fileSessions.find(
-        s => s.audioFile?.name === file.name || s.transcriptFile?.name === file.name
-      );
-      if (!session) {
-        toast({
-          title: "No matching audio file",
-          description: `No audio file found for transcript: ${file.name}`,
-          variant: "destructive"
-        });
-        continue;
-      }
-      if (!session.audioFileId) {
-        toast({
-          title: "Audio not uploaded yet",
-          description: `Please upload the audio file for ${file.name} and wait for upload to complete before uploading the transcript.`,
-          variant: "destructive"
-        });
-        continue;
-      }
-      // Read file as text
-      const text = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target?.result as string);
-        reader.onerror = reject;
-        reader.readAsText(file);
-      });
-      // POST to backend
-      try {
-        const transcription = await scoringAPI.uploadReadyTranscription({
-          audio_file_id: session.audioFileId,
-          text,
-          language: 'ru',
-        });
-        // After upload, fetch updated files and transcriptions
-        if (currentProject?.id) await fetchProjectFilesAndTranscriptions(currentProject.id)
-        toast({
-          title: "Transcript uploaded",
-          description: `Transcript for ${file.name} uploaded successfully`
-        });
-      } catch (err) {
-        toast({
-          title: "Transcript upload failed",
-          description: err instanceof Error ? err.message : String(err),
-          variant: "destructive"
-        });
-      }
-    }
-  }, [toast, fileSessions, currentProject?.id, fetchProjectFilesAndTranscriptions]);
 
   // Transcription handlers
   const handleRunTranscription = useCallback(async (sessionId: string) => {
     const session = fileSessions.find(s => s.id === sessionId)
     if (!session?.audioFileId) {
       toast({
-        title: "No audio file",
-        description: "Please upload an audio file first",
+        title: "Нет аудио файла",
+        description: "Сначала загрузите аудиозапись",
         variant: "destructive"
       })
       return
@@ -344,8 +298,8 @@ export default function ScoringPage() {
             ))
 
             toast({
-              title: "Transcription complete",
-              description: "Audio transcription completed successfully"
+              title: "Транскрипция завершена",
+              description: "Аудио успешно преобразовано в текст"
             })
           } else if (transcription.status === "failed") {
             clearInterval(pollInterval)
@@ -360,13 +314,13 @@ export default function ScoringPage() {
          } catch (error) {
        setFileSessions(prev => prev.map(session => 
          session.id === sessionId 
-           ? { ...session, isTranscribing: false, status: "failed", error: error instanceof Error ? error.message : 'Unknown error' }
+           ? { ...session, isTranscribing: false, status: "failed", error: error instanceof Error ? error.message : 'Неизвестная ошибка' }
            : session
        ))
        
        toast({
-         title: "Transcription failed", 
-         description: "There was an error transcribing the file",
+         title: "Ошибка транскрибации", 
+         description: "Не удалось получить транскрипт",
          variant: "destructive"
        })
      }
@@ -376,8 +330,8 @@ export default function ScoringPage() {
   const handleAnalyzeFile = useCallback(async (sessionId: string) => {
     if (!checklist) {
       toast({
-        title: "No checklist",
-        description: "Please upload a checklist first",
+        title: "Нет чек-листа",
+        description: "Сначала загрузите чек-лист",
         variant: "destructive"
       })
       return
@@ -386,8 +340,8 @@ export default function ScoringPage() {
     const session = fileSessions.find(s => s.id === sessionId)
     if (!session?.transcriptionId) {
       toast({
-        title: "No transcription",
-        description: "Please transcribe the file first",
+        title: "Нет транскрипта",
+        description: "Сначала выполните транскрибацию файла",
         variant: "destructive"
       })
       return
@@ -427,8 +381,8 @@ export default function ScoringPage() {
               ))
 
               toast({
-                title: "Analysis complete",
-                description: "File analysis completed successfully"
+                title: "Анализ завершён",
+                description: "Файл успешно проанализирован"
               })
             } else if (status.status === "failed") {
               clearInterval(pollInterval)
@@ -444,13 +398,13 @@ export default function ScoringPage() {
          } catch (error) {
        setFileSessions(prev => prev.map(session => 
          session.id === sessionId 
-           ? { ...session, isAnalyzing: false, status: "failed", error: error instanceof Error ? error.message : 'Unknown error' }
+           ? { ...session, isAnalyzing: false, status: "failed", error: error instanceof Error ? error.message : 'Неизвестная ошибка' }
            : session
        ))
        
        toast({
-         title: "Analysis failed", 
-         description: "There was an error analyzing the file",
+         title: "Ошибка анализа", 
+         description: "Не удалось выполнить анализ",
          variant: "destructive"
        })
      }
@@ -460,16 +414,16 @@ export default function ScoringPage() {
   const handleBatchAnalysis = useCallback(async () => {
     if (!checklist) {
       toast({
-        title: "No checklist",
-        description: "Please upload a checklist first",
+        title: "Нет чек-листа",
+        description: "Сначала загрузите чек-лист",
         variant: "destructive"
       })
       return
     }
     if (selectedSessions.size === 0) {
       toast({
-        title: "No files selected",
-        description: "Please select at least one file to analyze.",
+        title: "Не выбраны файлы",
+        description: "Выберите хотя бы один файл для анализа",
         variant: "destructive"
       })
       return
@@ -483,8 +437,8 @@ export default function ScoringPage() {
 
     if (transcriptionIds.length === 0) {
       toast({
-        title: "No transcriptions",
-        description: "Please transcribe files before batch analysis",
+        title: "Нет транскриптов",
+        description: "Сначала выполните транскрибацию файлов",
         variant: "destructive"
       })
       return
@@ -521,8 +475,8 @@ export default function ScoringPage() {
             // ... implementation details
             
             toast({
-              title: "Batch analysis complete",
-              description: `Analyzed ${transcriptionIds.length} files successfully`
+              title: "Пакетный анализ завершён",
+              description: `Успешно проанализировано файлов: ${transcriptionIds.length}`
             })
           } else if (taskStatus.status === "failed") {
             clearInterval(pollInterval)
@@ -539,8 +493,8 @@ export default function ScoringPage() {
     } catch (error) {
       setBatchProgress(null)
       toast({
-        title: "Batch analysis failed",
-        description: "There was an error with batch analysis",
+        title: "Ошибка пакетного анализа",
+        description: "Не удалось выполнить пакетный анализ",
         variant: "destructive"
       })
     }
@@ -571,13 +525,13 @@ export default function ScoringPage() {
       setChecklist(uploadedChecklist)
       
       toast({
-        title: "Checklist uploaded",
-        description: `Checklist "${uploadedChecklist.name}" uploaded successfully`
+        title: "Чек-лист загружен",
+        description: `Чек-лист «${uploadedChecklist.name}» успешно добавлен`
       })
     } catch (error) {
       toast({
-        title: "Checklist upload failed",
-        description: "There was an error uploading the checklist",
+        title: "Ошибка при загрузке чек-листа",
+        description: "Не удалось загрузить чек-лист",
         variant: "destructive"
       })
     }
@@ -610,16 +564,16 @@ export default function ScoringPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="mx-auto w-full space-y-6">
         {/* Header */}
         <div className="text-center space-y-2 py-6">
-          <h1 className="text-3xl font-bold">Speech Analytics Scoring Platform</h1>
+          <h1 className="text-3xl font-bold">Платформа оценки разговоров</h1>
           <p className="text-gray-600 dark:text-gray-400">
-            Upload audio files, analyze with AI, and review scoring results
+            Загружайте аудио, запускайте ИИ-анализ и проверяйте результаты
           </p>
           {currentProject && (
             <Badge variant="outline" className="mt-2">
-              Project: {currentProject.name}
+              Проект: {currentProject.name}
             </Badge>
           )}
         </div>
@@ -629,7 +583,7 @@ export default function ScoringPage() {
           <Card>
             <CardContent className="p-6 text-center">
               <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-              <p>Initializing project...</p>
+              <p>Инициализация проекта...</p>
             </CardContent>
           </Card>
         )}
@@ -637,11 +591,11 @@ export default function ScoringPage() {
         {/* Main Content */}
         {currentProject && (
           <Tabs defaultValue="upload" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="upload">Upload & Setup</TabsTrigger>
-              <TabsTrigger value="files">Files & Analysis</TabsTrigger>
-              <TabsTrigger value="analytics">Analytics</TabsTrigger>
-              <TabsTrigger value="individual">Individual Review</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              <TabsTrigger value="upload">Загрузка и настройка</TabsTrigger>
+              <TabsTrigger value="files">Файлы и анализ</TabsTrigger>
+              <TabsTrigger value="analytics">Аналитика</TabsTrigger>
+              <TabsTrigger value="individual">Индивидуальный разбор</TabsTrigger>
             </TabsList>
 
             {/* Upload & Setup Tab */}
@@ -649,12 +603,9 @@ export default function ScoringPage() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <FileUploadSection
                   audioFile={null}
-                  transcriptFile={null}
                   onAudioUpload={handleAudioUpload}
-                  onTranscriptUpload={handleTranscriptUpload}
                   onTranscribe={() => {}}
                   isTranscribing={false}
-                  hasTranscript={false}
                   supportMultiple={true}
                 />
                 
@@ -671,31 +622,31 @@ export default function ScoringPage() {
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                       <div className="text-center">
                         <div className="text-2xl font-bold">{fileSessions.length}</div>
-                        <div className="text-sm text-gray-500">Total Files</div>
+                        <div className="text-sm text-gray-500">Всего файлов</div>
                       </div>
                       <div className="text-center">
                         <div className="text-2xl font-bold">
                           {fileSessions.filter(s => s.status === "uploaded").length}
                         </div>
-                        <div className="text-sm text-gray-500">Uploaded</div>
+                        <div className="text-sm text-gray-500">Загружено</div>
                       </div>
                       <div className="text-center">
                         <div className="text-2xl font-bold">
                           {fileSessions.filter(s => s.status === "transcribed" || s.status === "analyzed").length}
                         </div>
-                        <div className="text-sm text-gray-500">Transcribed</div>
+                        <div className="text-sm text-gray-500">С транскриптом</div>
                       </div>
                       <div className="text-center">
                         <div className="text-2xl font-bold">
                           {fileSessions.filter(s => s.status === "analyzed").length}
                         </div>
-                        <div className="text-sm text-gray-500">Analyzed</div>
+                        <div className="text-sm text-gray-500">Проанализировано</div>
                       </div>
                       <div className="text-center">
                         <div className="text-2xl font-bold">
                           {fileSessions.filter(s => s.isTranscribing || s.isAnalyzing).length}
                         </div>
-                        <div className="text-sm text-gray-500">Processing</div>
+                        <div className="text-sm text-gray-500">В обработке</div>
                       </div>
                     </div>
                   </CardContent>
@@ -713,7 +664,7 @@ export default function ScoringPage() {
                       <div className="flex flex-wrap items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
                           <Input
-                            placeholder="Search files..."
+                            placeholder="Поиск файлов..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-64"
@@ -724,10 +675,10 @@ export default function ScoringPage() {
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="all">All Files</SelectItem>
-                              <SelectItem value="pending">Pending</SelectItem>
-                              <SelectItem value="transcribed">Transcribed</SelectItem>
-                              <SelectItem value="analyzed">Analyzed</SelectItem>
+                              <SelectItem value="all">Все файлы</SelectItem>
+                              <SelectItem value="pending">В ожидании</SelectItem>
+                              <SelectItem value="transcribed">С текстом</SelectItem>
+                              <SelectItem value="analyzed">Проанализировано</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -738,7 +689,7 @@ export default function ScoringPage() {
                             size="sm"
                             onClick={handleSelectAll}
                           >
-                            Select All
+                            Выбрать все
                           </Button>
                           
                           {selectedSessions.size > 0 && (
@@ -750,12 +701,12 @@ export default function ScoringPage() {
                               {batchProgress ? (
                                 <>
                                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                  Analyzing ({batchProgress.current}/{batchProgress.total})
+                                  Анализ ({batchProgress.current}/{batchProgress.total})
                                 </>
                               ) : (
                                 <>
                                   <Zap className="h-4 w-4 mr-2" />
-                                  Batch Analyze ({selectedSessions.size})
+                                  Пакетный анализ ({selectedSessions.size})
                                 </>
                               )}
                             </Button>
@@ -766,12 +717,12 @@ export default function ScoringPage() {
                       {batchProgress && batchProgress.stage === 'analysis' && (
                         <div className="mt-4 space-y-2">
                           <div className="flex justify-between text-sm font-medium">
-                            <span>Batch Analysis Progress</span>
+                            <span>Прогресс пакетного анализа</span>
                             <span>{Math.round((batchProgress.current / batchProgress.total) * 100)}%</span>
                           </div>
                           <Progress value={(batchProgress.current / batchProgress.total) * 100} />
                           <div className="flex justify-between text-xs text-gray-500 mt-1">
-                            <span>Analyzing {batchProgress.current} of {batchProgress.total} files</span>
+                            <span>Анализ {batchProgress.current} из {batchProgress.total} файлов</span>
                           </div>
                         </div>
                       )}
@@ -800,11 +751,11 @@ export default function ScoringPage() {
                                   <FileAudio className="h-5 w-5 text-blue-600" />
                                   <div>
                                     <div className="font-medium">
-                                      {session.audioFile?.name || "No audio file"}
+                                      {session.audioFile?.name || "Аудио не загружено"}
                                     </div>
                                     <div className="text-sm text-gray-500">
-                                      {session.audioFile && `${(session.audioFile.size / 1024 / 1024).toFixed(1)} MB`}
-                                      {session.error && ` • Error: ${session.error}`}
+                                      {session.audioFile && `${(session.audioFile.size / 1024 / 1024).toFixed(1)} МБ`}
+                                      {session.error && ` • ${session.error}`}
                                     </div>
                                   </div>
                                 </div>
@@ -813,7 +764,7 @@ export default function ScoringPage() {
                               <div className="flex items-center gap-4">
                                 <div className="flex gap-1">
                                   <Badge variant={session.status === "uploaded" || session.status === "transcribed" || session.status === "analyzed" ? "default" : session.status === "failed" ? "destructive" : "secondary"}>
-                                    {session.status}
+                                    {statusLabels[session.status]}
                                   </Badge>
                                   {session.progress !== undefined && session.progress < 100 && (
                                     <Badge variant="outline">
@@ -854,7 +805,7 @@ export default function ScoringPage() {
                                     variant="outline"
                                     onClick={() => setActiveSessionId(session.id)}
                                   >
-                                    View
+                                    Открыть
                                   </Button>
                                 </div>
                               </div>
@@ -867,7 +818,7 @@ export default function ScoringPage() {
                       {totalPages > 1 && (
                         <div className="flex items-center justify-between mt-6">
                           <div className="text-sm text-gray-500">
-                            Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredSessions.length)} of {filteredSessions.length} files
+                            Показаны записи {((currentPage - 1) * itemsPerPage) + 1}–{Math.min(currentPage * itemsPerPage, filteredSessions.length)} из {filteredSessions.length}
                           </div>
                           <div className="flex gap-2">
                             <Button
@@ -879,7 +830,7 @@ export default function ScoringPage() {
                               <ChevronLeft className="h-4 w-4" />
                             </Button>
                             <span className="px-3 py-2 text-sm">
-                              Page {currentPage} of {totalPages}
+                              Страница {currentPage} из {totalPages}
                             </span>
                             <Button
                               variant="outline"
@@ -896,13 +847,13 @@ export default function ScoringPage() {
                   </Card>
                 </>
               ) : (
-                <Card>
-                  <CardContent className="p-8 text-center">
-                    <FileAudio className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-500">No files uploaded yet. Go to Upload & Setup to get started.</p>
-                  </CardContent>
-                </Card>
-              )}
+               <Card>
+                 <CardContent className="p-8 text-center">
+                   <FileAudio className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500">Файлы ещё не загружены. Перейдите во вкладку «Загрузка и настройка», чтобы начать.</p>
+                 </CardContent>
+               </Card>
+             )}
             </TabsContent>
 
             {/* Analytics Tab */}
@@ -910,15 +861,15 @@ export default function ScoringPage() {
               <Card>
                 <CardContent className="p-8 text-center">
                   <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">Analytics will be available once files are processed</p>
+                  <p className="text-gray-500">Аналитика будет доступна после обработки файлов</p>
                 </CardContent>
               </Card>
             </TabsContent>
 
             {/* Individual Review Tab */}
-            <TabsContent value="individual">
+            <TabsContent value="individual" className="space-y-6">
               {activeSession ? (
-                <div className="space-y-6">
+                <div className="space-y-6 min-w-0">
                   {activeSession.transcriptData && (
                     <TranscriptViewer
                       transcriptData={{
@@ -935,19 +886,23 @@ export default function ScoringPage() {
                   )}
                   
                   {activeSession.analysisResults.length > 0 && checklist && (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      <AutoAnalysisSection
-                        checklist={checklist}
-                        analysisResults={activeSession.analysisResults}
-                        isAnalyzing={activeSession.isAnalyzing}
-                        onAnalyze={() => handleAnalyzeFile(activeSession.id)}
-                        onScoreUpdate={() => {}}
-                      />
+                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
+                      <div className="min-w-0">
+                        <AutoAnalysisSection
+                          checklist={checklist}
+                          analysisResults={activeSession.analysisResults}
+                          isAnalyzing={activeSession.isAnalyzing}
+                          onAnalyze={() => handleAnalyzeFile(activeSession.id)}
+                          onScoreUpdate={() => {}}
+                        />
+                      </div>
                       
-                      <StatisticsSection
-                        analysisResults={activeSession.analysisResults}
-                        checklist={checklist}
-                      />
+                      <div className="min-w-0">
+                        <StatisticsSection
+                          analysisResults={activeSession.analysisResults}
+                          checklist={checklist}
+                        />
+                      </div>
                     </div>
                   )}
                 </div>
@@ -955,7 +910,7 @@ export default function ScoringPage() {
                 <Card>
                   <CardContent className="p-8 text-center">
                     <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-500">Select a file from the Files & Analysis tab to view individual review</p>
+                    <p className="text-gray-500">Выберите файл во вкладке «Файлы и анализ», чтобы увидеть индивидуальный разбор</p>
                   </CardContent>
                 </Card>
               )}
@@ -963,45 +918,6 @@ export default function ScoringPage() {
           </Tabs>
         )}
       </div>
-
-      {process.env.NODE_ENV === 'development' && fileSessions.some(s => typeof s.audioFileId === 'string' && s.audioFileId) && (
-        <button
-          style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 1000, background: '#2563eb', color: 'white', padding: '12px 24px', borderRadius: 8 }}
-          onClick={async () => {
-            const session = fileSessions.find(s => typeof s.audioFileId === 'string' && s.audioFileId)
-            if (!session || !session.audioFileId) return alert('No session with audioFileId');
-            const text = 'This is a test transcript for dev testing.'
-            try {
-              const transcription = await scoringAPI.uploadReadyTranscription({
-                audio_file_id: session.audioFileId || '',
-                text,
-                language: 'en',
-              });
-              setFileSessions(prev => prev.map(s =>
-                s.id === session.id ? {
-                  ...s,
-                  transcriptData: {
-                    text: transcription.text,
-                    wordCount: transcription.word_count,
-                    duration: transcription.duration_seconds,
-                    confidence: transcription.confidence,
-                    language: transcription.language,
-                    processingTime: transcription.processing_time_seconds
-                  },
-                  transcriptionId: transcription.id,
-                  status: 'transcribed',
-                  error: undefined
-                } : s
-              ));
-              alert('Test transcript uploaded!');
-            } catch (err) {
-              alert('Failed to upload test transcript: ' + (err instanceof Error ? err.message : 'Unknown error'));
-            }
-          }}
-        >
-          DEV: Upload Test Transcript
-        </button>
-      )}
     </div>
   )
 } 
