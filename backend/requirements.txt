@@ -11,3 +11,4 @@ soundfile==0.12.1
 numpy==1.24.3
 requests==2.31.0
 pydantic-settings==2.1.0
+httpx==0.25.2
