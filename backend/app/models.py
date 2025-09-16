@@ -56,3 +56,28 @@ class HealthResponse(BaseModel):
     status: str = Field(..., description="Service status")
     model_loaded: bool = Field(..., description="Whether the Whisper model is loaded")
     version: str = Field(..., description="Service version")
+
+
+class SummaryFormat(str, Enum):
+    """Supported formats for generated summaries."""
+    PARAGRAPH = "paragraph"
+    BULLET = "bullet"
+
+
+class SummarizationRequest(BaseModel):
+    """Request model for text summarization."""
+    text: str = Field(..., description="Full transcript or text to summarize", min_length=1)
+    instructions: Optional[str] = Field(None, description="Optional custom guidance for the model")
+    focus: Optional[str] = Field(None, description="Key topics or outcomes to prioritize")
+    format: SummaryFormat = Field(SummaryFormat.PARAGRAPH, description="Preferred summary style")
+    temperature: Optional[float] = Field(None, description="Override generation temperature")
+    max_tokens: Optional[int] = Field(None, description="Override maximum tokens for the response")
+
+
+class SummarizationResponse(BaseModel):
+    """Response model for summarization."""
+    summary: str = Field(..., description="Generated summary text")
+    model: str = Field(..., description="Model used for generation")
+    prompt_tokens: Optional[int] = Field(None, description="Approximate tokens used for the prompt")
+    completion_tokens: Optional[int] = Field(None, description="Approximate tokens generated in the summary")
+    duration_ms: Optional[float] = Field(None, description="Total time spent generating the summary in milliseconds")

@@ -12,6 +12,7 @@
 - 🌍 **Автоопределение языка** и поддержка перевода
 - 📊 **Детальная информация** об аудио файлах
 - 🚀 **Высокая производительность** с поддержкой GPU
+- 📝 **Суммаризация стенограмм** через Ollama и модель Gemma 3 27B
 
 ## Установка
 
@@ -129,6 +130,30 @@ curl -X POST "http://localhost:8000/api/v1/transcribe/url" \
   -d "url=https://example.com/audio.mp3&language=ru&word_timestamps=true"
 ```
 
+### 5. Суммаризация текста
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/summarize" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "text": "...ваша расшифровка разговора...",
+        "focus": "ключевые договорённости и следующие шаги",
+        "format": "bullet"
+      }'
+```
+
+Проверить доступность бэкенда суммаризации можно запросом:
+
+```bash
+curl http://localhost:8000/api/v1/summarize/health
+```
+
+⚠️ Убедитесь, что локально установлен Ollama и загружена модель `gemma3:27b`:
+
+```bash
+ollama pull gemma3:27b
+```
+
 ## Параметры API
 
 ### Основные параметры
@@ -154,6 +179,8 @@ curl -X POST "http://localhost:8000/api/v1/transcribe/url" \
 | `compression_ratio_threshold` | Порог сжатия | 2.4 |
 | `log_prob_threshold` | Порог логарифма вероятности | -1.0 |
 | `no_speech_threshold` | Порог отсутствия речи | 0.6 |
+
+Настройки сервиса суммаризации задаются переменными окружения `OLLAMA_BASE_URL`, `SUMMARIZATION_MODEL`, `SUMMARIZATION_MAX_TOKENS`, `SUMMARIZATION_TEMPERATURE` и др. (см. `app/config.py`).
 
 ## Поддерживаемые форматы
 
@@ -185,9 +212,11 @@ backend/
 │   ├── exceptions.py           # Пользовательские исключения
 │   ├── utils.py                # Утилиты
 │   ├── whisper_service.py      # Сервис Whisper
+│   ├── summarization_service.py# Сервис суммаризации Ollama
 │   └── api/
 │       ├── __init__.py
-│       └── transcription.py    # API endpoints
+│       ├── transcription.py    # API endpoints для распознавания
+│       └── summarization.py    # API endpoints для суммаризации
 ├── requirements.txt
 └── README.md
 ```
@@ -216,6 +245,12 @@ CORS_ORIGINS=["*"]
 CORS_ALLOW_CREDENTIALS=true
 CORS_ALLOW_METHODS=["*"]
 CORS_ALLOW_HEADERS=["*"]
+
+# Суммаризация
+OLLAMA_BASE_URL=http://localhost:11434
+SUMMARIZATION_MODEL=gemma3:27b
+SUMMARIZATION_MAX_TOKENS=512
+SUMMARIZATION_TEMPERATURE=0.3
 ```
 
 ## Примеры ответов

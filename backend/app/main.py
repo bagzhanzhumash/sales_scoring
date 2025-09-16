@@ -10,7 +10,9 @@ from fastapi.responses import JSONResponse
 import uvicorn
 
 from .api.transcription import router as transcription_router
+from .api.summarization import router as summarization_router
 from .whisper_service import WhisperService
+from .summarization_service import SummarizationServiceError, summarization_service
 from .config import settings
 
 # Configure logging
@@ -43,11 +45,20 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Failed to load Whisper model: {e}")
         raise
+
+    # Warm summarization backend
+    try:
+        await summarization_service.ensure_model_available()
+        logger.info("Summarization model verified successfully")
+    except SummarizationServiceError as e:
+        logger.error(f"Failed to verify summarization model: {e}")
+        raise
     
     yield
     
     # Shutdown
     logger.info("Shutting down Speech Recognition Service...")
+    await summarization_service.close()
 
 
 # Create FastAPI app
@@ -71,6 +82,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(transcription_router)
+app.include_router(summarization_router)
 
 
 @app.exception_handler(HTTPException)

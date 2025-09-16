@@ -21,6 +21,18 @@ class Settings(BaseSettings):
     device: str = "auto"  # auto, cpu, cuda
     compute_type: str = "auto"  # auto, float16, int8, int8_float16
     download_root: str = "backend/app/models"
+
+    # Summarization settings
+    ollama_base_url: str = "http://localhost:11434"
+    summarization_model: str = "gemma3:27b"
+    summarization_temperature: float = 0.3
+    summarization_top_p: float = 0.9
+    summarization_max_tokens: int = 512
+    summarization_timeout: float = 60.0
+    summarization_system_prompt: str = (
+        "You are an expert sales conversation analyst. Provide concise summaries "
+        "covering outcomes, action items, sentiment, and any blockers."
+    )
     
     # File upload settings
     max_file_size: int = 100 * 1024 * 1024  # 100MB
