@@ -154,6 +154,19 @@ curl http://localhost:8000/api/v1/summarize/health
 ollama pull gemma3:27b
 ```
 
+### 6. Сквозной анализ аудио
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/analysis/audio-summary" \
+  -F "file=@call.mp3" \
+  -F 'checklist={"id":"demo","name":"Demo checklist","categories":[{"id":"greeting","name":"Приветствие","criteria":[{"id":"greeting_hello","text":"Менеджер поздоровался"},{"id":"greeting_introduction","text":"Менеджер представился"}]}]}' \
+  -F "client_name=ООО Ромашка" \
+  -F "status=В работе" \
+  -F "action_items=Позвонить завтра;Подготовить КП"
+```
+
+Эндпоинт возвращает только структурированную сводку разговора, аналогичную тому, что видно в интерфейсе после нажатия «Запустить анализ».
+
 ## Параметры API
 
 ### Основные параметры

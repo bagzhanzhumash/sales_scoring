@@ -5,7 +5,7 @@ import logging
 import re
 import textwrap
 import time
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, Iterable, List, Literal, Optional
 
 import httpx
 from pydantic import ValidationError
@@ -14,9 +14,12 @@ from .config import settings
 from .models import (
     CallSummarizationRequest,
     CallSummarizationResponse,
+    CallSummaryDetails,
     ChecklistAnalysisRequest,
     ChecklistAnalysisResult,
     ChecklistAnalysisResponse,
+    ScorecardEntry,
+    SentimentDetails,
     SummarizationRequest,
     SummarizationResponse,
     SummaryFormat,
@@ -33,6 +36,18 @@ class SummarizationServiceError(Exception):
 class SummarizationService:
     """Service responsible for summarizing text via Ollama."""
 
+    PLACEHOLDER_TOKENS = {
+        "string",
+        "placeholder",
+        "n/a",
+        "none",
+        "нет данных",
+        "нет информации",
+        "не указано",
+        "-",
+        "—",
+    }
+
     def __init__(self) -> None:
         self.model_name = settings.summarization_model
         self.base_url = settings.ollama_base_url.rstrip("/")
@@ -42,6 +57,7 @@ class SummarizationService:
         self.default_max_tokens = settings.summarization_max_tokens
         self.timeout = settings.summarization_timeout
         self.checklist_response_schema = ChecklistAnalysisResponse.model_json_schema()
+        self.call_summary_schema = CallSummarizationResponse.model_json_schema()
         self._client: Optional[httpx.AsyncClient] = None
 
     async def _get_client(self) -> httpx.AsyncClient:
@@ -435,15 +451,244 @@ class SummarizationService:
 
         return results
 
+    @classmethod
+    def _is_placeholder(cls, value: Optional[str]) -> bool:
+        if value is None:
+            return True
+        normalized = value.strip().lower()
+        return normalized == "" or normalized in cls.PLACEHOLDER_TOKENS
+
+    @classmethod
+    def _clean_list(cls, items: Optional[Iterable[str]]) -> List[str]:
+        cleaned: List[str] = []
+        if not items:
+            return cleaned
+        for item in items:
+            if item is None:
+                continue
+            text = item.strip()
+            if not text or cls._is_placeholder(text):
+                continue
+            if text not in cleaned:
+                cleaned.append(text)
+        return cleaned
+
+    @classmethod
+    def _merge_call_summaries(
+        cls,
+        primary: CallSummarizationResponse,
+        fallback: CallSummarizationResponse,
+    ) -> CallSummarizationResponse:
+        summary = primary.callSummary
+        fallback_summary = fallback.callSummary
+
+        summary.discussionPoints = cls._clean_list(summary.discussionPoints)
+        if not summary.discussionPoints:
+            summary.discussionPoints = list(fallback_summary.discussionPoints)
+
+        summary.actionItems = cls._clean_list(summary.actionItems)
+        if not summary.actionItems:
+            summary.actionItems = list(fallback_summary.actionItems)
+
+        summary.managerRecommendations = cls._clean_list(summary.managerRecommendations)
+        if not summary.managerRecommendations:
+            summary.managerRecommendations = list(fallback_summary.managerRecommendations)
+
+        if cls._is_placeholder(summary.category):
+            summary.category = fallback_summary.category
+        else:
+            summary.category = summary.category.strip()
+
+        if cls._is_placeholder(summary.purpose):
+            summary.purpose = fallback_summary.purpose
+        else:
+            summary.purpose = summary.purpose.strip()
+
+        if cls._is_placeholder(summary.decisionMade):
+            summary.decisionMade = fallback_summary.decisionMade
+        else:
+            summary.decisionMade = summary.decisionMade.strip()
+
+        if cls._is_placeholder(summary.createdAt):
+            summary.createdAt = fallback_summary.createdAt
+
+        sentiment = primary.sentiment
+        fallback_sentiment = fallback.sentiment
+
+        if cls._is_placeholder(sentiment.overall):
+            sentiment.overall = fallback_sentiment.overall
+        else:
+            sentiment.overall = sentiment.overall.strip()
+
+        sentiment.tone = cls._clean_list(sentiment.tone)
+        if not sentiment.tone:
+            sentiment.tone = list(fallback_sentiment.tone)
+
+        sentiment.drivers = cls._clean_list(sentiment.drivers)
+        if not sentiment.drivers:
+            sentiment.drivers = list(fallback_sentiment.drivers)
+
+        sentiment.recommendations = cls._clean_list(sentiment.recommendations)
+        if not sentiment.recommendations:
+            sentiment.recommendations = list(fallback_sentiment.recommendations)
+
+        sentiment.managerRecommendations = cls._clean_list(sentiment.managerRecommendations)
+        if not sentiment.managerRecommendations:
+            sentiment.managerRecommendations = list(summary.managerRecommendations)
+        else:
+            sentiment.managerRecommendations = cls._clean_list(
+                sentiment.managerRecommendations + summary.managerRecommendations
+            )
+
+        cleaned_scorecards: List[ScorecardEntry] = []
+        if primary.scorecards:
+            for idx, card in enumerate(primary.scorecards):
+                title = card.title.strip()
+                description = (card.description or "").strip()
+
+                if cls._is_placeholder(title):
+                    fallback_card = (
+                        fallback.scorecards[idx]
+                        if idx < len(fallback.scorecards)
+                        else fallback.scorecards[0]
+                    )
+                    cleaned_scorecards.append(fallback_card)
+                    continue
+
+                if cls._is_placeholder(description) and fallback.scorecards:
+                    description = fallback.scorecards[min(idx, len(fallback.scorecards) - 1)].description
+
+                cleaned_scorecards.append(
+                    ScorecardEntry(
+                        title=title,
+                        score=card.score,
+                        target=card.target,
+                        description=description,
+                    )
+                )
+
+        if not cleaned_scorecards:
+            cleaned_scorecards = list(fallback.scorecards)
+
+        return CallSummarizationResponse(
+            callSummary=summary,
+            sentiment=sentiment,
+            scorecards=cleaned_scorecards,
+        )
+
+    async def _generate_call_summary_with_llm(
+        self,
+        request: CallSummarizationRequest,
+        fallback: CallSummarizationResponse,
+    ) -> CallSummarizationResponse:
+        client = await self._get_client()
+
+        metadata_lines: List[str] = []
+        if request.client_name:
+            metadata_lines.append(f"Имя клиента: {request.client_name}")
+        if request.status:
+            metadata_lines.append(f"Статус сделки: {request.status}")
+        if request.action_items:
+            metadata_lines.append(
+                "Известные action items: " + ", ".join(request.action_items)
+            )
+        if request.decision:
+            metadata_lines.append(f"Фиксированное решение: {request.decision}")
+
+        metadata_block = "\n".join(metadata_lines) if metadata_lines else "Нет дополнительного контекста."
+
+        system_message = textwrap.dedent(
+            f"""
+            {self.system_prompt}
+
+            Ты формируешь краткий отчёт для руководителя отдела продаж. Возвращай ТОЛЬКО JSON,
+            полностью соответствующий предоставленной схеме. Не используй заглушки вроде "string",
+            "n/a" или пустые слова. Если данных нет, опиши это коротко по делу. Списки должны
+            содержать максимум четыре уникальных пункта без повторов.
+            """
+        ).strip()
+
+        user_message = textwrap.dedent(
+            f"""
+            Контекст:
+            {metadata_block}
+
+            Транскрипт разговора:
+            <<<TRANSCRIPT>>>
+            {request.transcript_text.strip()}
+            <<<END TRANSCRIPT>>>
+            """
+        ).strip()
+
+        payload: Dict[str, Any] = {
+            "model": self.model_name,
+            "messages": [
+                {"role": "system", "content": system_message},
+                {"role": "user", "content": user_message},
+            ],
+            "stream": False,
+            "format": self.call_summary_schema,
+            "options": {
+                "temperature": 0.0,
+                "top_p": self.default_top_p,
+                "num_predict": max(self.default_max_tokens, 1024),
+            },
+        }
+
+        logger.debug(
+            "Submitting structured call summary request to Ollama: model=%s prompt_chars=%s",
+            self.model_name,
+            len(user_message),
+        )
+
+        try:
+            response = await client.post("/api/chat", json=payload)
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            logger.error("Call summary generation failed: %s", exc.response.text)
+            raise SummarizationServiceError(
+                f"Call summary failed with status {exc.response.status_code}"
+            ) from exc
+        except httpx.HTTPError as exc:
+            logger.error("Error while requesting call summary: %s", exc)
+            raise SummarizationServiceError("Failed to reach Ollama for call summary") from exc
+
+        data = response.json()
+        message_payload: Dict[str, Any] = data.get("message") or {}
+        message_content = message_payload.get("content") or data.get("response", "")
+
+        logger.debug(
+            "Raw call summary response snippet (first 500 chars): %s",
+            message_content[:500],
+        )
+
+        if not message_content:
+            logger.error("Call summary returned empty response body: %s", data)
+            raise SummarizationServiceError("Call summary returned empty response")
+
+        try:
+            structured = CallSummarizationResponse.model_validate_json(message_content)
+        except ValidationError as exc:
+            logger.error("Call summary validation failed: %s", exc)
+            raise SummarizationServiceError("Call summary returned invalid JSON") from exc
+
+        return self._merge_call_summaries(structured, fallback)
+
     async def summarize_call(
         self, request: CallSummarizationRequest
     ) -> CallSummarizationResponse:
         """Produce a structured call summary payload consumed by the frontend."""
 
+        fallback_summary = build_call_summary(request)
+
+        try:
+            return await self._generate_call_summary_with_llm(request, fallback_summary)
+        except SummarizationServiceError as exc:
+            logger.warning("Falling back to heuristic call summary: %s", exc)
+        except Exception as exc:  # pragma: no cover - defensive guard
+            logger.exception("Unexpected error while generating structured call summary")
+
         llm_bullets: Optional[str] = None
-        # The conversational summary benefits from concise bullet points. We
-        # attempt to obtain them from the LLM but gracefully fall back to the
-        # heuristic builder if the generation fails or is unavailable.
         try:
             bullet_summary = await self.summarize(
                 SummarizationRequest(
@@ -456,7 +701,7 @@ class SummarizationService:
             )
             llm_bullets = bullet_summary.summary
         except SummarizationServiceError as exc:
-            logger.warning("Falling back to heuristic call summary: %s", exc)
+            logger.warning("Bullet-point hint generation failed: %s", exc)
         except Exception as exc:  # pragma: no cover - defensive guard
             logger.exception("Unexpected error while generating call summary hints")
 

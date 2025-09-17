@@ -191,6 +191,14 @@ class ChecklistAnalysisResponse(BaseModel):
     results: List[ChecklistAnalysisResult] = Field(..., description="List of evaluated criteria")
 
 
+class AudioAnalysisResponse(BaseModel):
+    """Full pipeline response for audio ingestion, transcription, and checklist analysis."""
+
+    call_summary: CallSummarizationResponse = Field(
+        ..., description="Structured call summary generated from the transcript"
+    )
+
+
 class ChecklistAnalysisRequest(BaseModel):
     """Request payload used when scoring a transcript against a checklist."""
 
