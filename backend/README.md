@@ -38,6 +38,18 @@ pip install faster-whisper
 pip install faster-whisper[gpu]
 ```
 
+### Если будут проблемы c libcudnn то нужно установить torch:
+
+```bash
+pip install torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cu121
+```
+И еще сделать export:
+
+```bash
+export LD_LIBRARY_PATH=`python3 -c 'import os; import nvidia.cublas.lib; import nvidia.cudnn.lib; print(os.path.dirname(nvidia.cublas.lib.__file__) + ":" + os.path.dirname(nvidia.cudnn.lib.__file__))'`
+```
+и после этого сделать Запуск
+
 ## Запуск
 
 ### Разработка
