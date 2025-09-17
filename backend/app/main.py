@@ -52,9 +52,14 @@ async def lifespan(app: FastAPI):
         await summarization_service.ensure_model_available()
         logger.info("Summarization model verified successfully")
     except SummarizationServiceError as e:
-        logger.error(f"Failed to verify summarization model: {e}")
-        raise
-    
+        message = f"Failed to verify summarization model: {e}"
+        if settings.summarization_required:
+            logger.error(message)
+            raise
+        logger.warning(
+            f"{message} - continuing without LLM summarization. Start Ollama and run `ollama pull {settings.summarization_model}` if needed."
+        )
+
     yield
     
     # Shutdown

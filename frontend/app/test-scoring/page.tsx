@@ -51,7 +51,6 @@ import { Progress } from "@/components/ui/progress"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { AlertTriangle, Sparkles, MessageSquare, FileAudio, FileText, Trash2, BarChart3, Users, ChevronLeft, ChevronRight, Search, List, Grid, Loader2, Zap, Check } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import type { Checklist } from "@/types/projects"
@@ -175,8 +174,6 @@ export default function TestScoringPage() {
   const [sortBy, setSortBy] = useState<'name' | 'date' | 'status' | 'progress'>('date')
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 20
-  const [analysisModalSessionId, setAnalysisModalSessionId] = useState<string | null>(null)
-  const handleCloseAnalysisModal = useCallback(() => setAnalysisModalSessionId(null), [])
   
   // Checklist and processing state  
   const [checklist, setChecklist] = useState<Checklist | null>(null)
@@ -250,18 +247,15 @@ export default function TestScoringPage() {
 
   // Get active session
   const activeSession = fileSessions.find(session => session.id === activeSessionId)
-  const analysisModalSession = useMemo(() => {
-    if (!analysisModalSessionId) return null
-    return fileSessions.find(session => session.id === analysisModalSessionId) || null
-  }, [analysisModalSessionId, fileSessions])
-  const analysisModalStats = useMemo(() => {
-    if (!analysisModalSession) return null
-    const results = analysisModalSession.analysisResults
-    if (!results.length) return null
+  const activeAnalysisStats = useMemo(() => {
+    if (!activeSession || activeSession.analysisResults.length === 0) return null
+    const results = activeSession.analysisResults
     const passed = results.filter(result => result.score === 1)
     const failed = results.filter(result => result.score === 0)
     const unclear = results.filter(result => result.score === "?")
-    const avgConfidence = Math.round(results.reduce((acc, result) => acc + result.confidence, 0) / results.length)
+    const avgConfidence = Math.round(
+      results.reduce((acc, result) => acc + result.confidence, 0) / results.length
+    )
     const needsReview = results.filter(result => result.needsReview)
     return {
       passed: passed.length,
@@ -269,9 +263,9 @@ export default function TestScoringPage() {
       unclear: unclear.length,
       avgConfidence,
       needsReview: needsReview.length,
-      passRate: Math.round((passed.length / results.length) * 100)
+      passRate: Math.round((passed.length / results.length) * 100),
     }
-  }, [analysisModalSession])
+  }, [activeSession])
   
   // Check if we can proceed with analysis
   const canAnalyze = checklist && fileSessions.some(session => session.transcriptData)
@@ -804,7 +798,6 @@ export default function TestScoringPage() {
       }))
 
       setHasUnsavedChanges(true)
-      setAnalysisModalSessionId(sessionId)
       toast({
         title: "Analysis complete",
         description: `Analyzed ${results.length} criteria for this file`
@@ -1183,10 +1176,7 @@ export default function TestScoringPage() {
       <div className="mx-auto w-full space-y-6">
         {/* Header */}
         <div className="text-center space-y-2 py-6">
-          <h1 className="text-3xl font-bold">Multi-File Call/Chat Scoring Platform</h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Evaluate operator performance across multiple files using AI-powered analysis and human feedback
-          </p>
+          <h1 className="text-3xl font-bold">Анализ качества работы менеджера для руководителей</h1>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[320px,1fr]">
@@ -1747,24 +1737,16 @@ export default function TestScoringPage() {
                       )}
                     </div>
 
-                    {activeSession.transcriptData && (
-                      <TranscriptViewer transcriptData={activeSession.transcriptData} audioFile={activeSession.audioFile || null} />
-                    )}
-
-                    {activeSession.analysisResults.length > 0 && checklist && (
-                      <div className="rounded-lg border border-blue-200 bg-blue-50/70 p-4 text-sm dark:border-blue-800 dark:bg-blue-950/30">
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                          <div>
-                            <p className="font-semibold text-blue-900 dark:text-blue-100">AI-анализ готов</p>
-                            <p className="text-blue-800 dark:text-blue-200">
-                              Просмотрите вывод по чек-листу, чтобы оценить работу менеджера.
-                            </p>
-                          </div>
-                          <Button size="sm" onClick={() => setAnalysisModalSessionId(activeSession.id)}>
-                            Открыть окно анализа
-                          </Button>
-                        </div>
+                    {activeSession.isTranscribing ? (
+                      <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-blue-200 bg-blue-50/70 p-8 text-blue-900 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-100">
+                        <Loader2 className="h-8 w-8 animate-spin" />
+                        <p className="text-sm font-medium">Выполняем транскрибацию аудио…</p>
+                        <p className="text-xs text-blue-700 dark:text-blue-200/80">Это может занять несколько минут для длинных записей.</p>
                       </div>
+                    ) : (
+                      activeSession.transcriptData && (
+                        <TranscriptViewer transcriptData={activeSession.transcriptData} audioFile={activeSession.audioFile || null} />
+                      )
                     )}
 
                     <FileStatistics
@@ -1775,6 +1757,77 @@ export default function TestScoringPage() {
                       onPlayAudio={() => {}}
                       onDownload={() => {}}
                     />
+
+                    {activeSession.analysisResults.length > 0 && checklist && (
+                      <div className="space-y-4 rounded-xl border border-blue-200 bg-blue-50/70 p-4 text-sm dark:border-blue-800 dark:bg-blue-950/30">
+                        <div className="space-y-1">
+                          <p className="text-base font-semibold text-blue-900 dark:text-blue-100">AI-анализ по чек-листу</p>
+                          <p className="text-blue-800 dark:text-blue-200">
+                            Автоматическая оценка критериев, подготовленная для руководителя.
+                          </p>
+                        </div>
+
+                        {activeAnalysisStats && (
+                          <div className="grid gap-3 sm:grid-cols-3">
+                            <div className="rounded-lg bg-white/70 p-3 text-sm shadow-sm dark:bg-blue-950/40">
+                              <p className="text-xs uppercase text-blue-500 dark:text-blue-200/80">Выполнено</p>
+                              <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{activeAnalysisStats.passed}</p>
+                            </div>
+                            <div className="rounded-lg bg-white/70 p-3 text-sm shadow-sm dark:bg-blue-950/40">
+                              <p className="text-xs uppercase text-blue-500 dark:text-blue-200/80">Провалы</p>
+                              <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{activeAnalysisStats.failed}</p>
+                            </div>
+                            <div className="rounded-lg bg-white/70 p-3 text-sm shadow-sm dark:bg-blue-950/40">
+                              <p className="text-xs uppercase text-blue-500 dark:text-blue-200/80">Неопределённо</p>
+                              <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{activeAnalysisStats.unclear}</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {activeAnalysisStats && (
+                          <div className="flex flex-wrap gap-3 text-xs text-blue-800 dark:text-blue-200">
+                            <span>Успешность: {activeAnalysisStats.passRate}%</span>
+                            <span>Средняя уверенность: {activeAnalysisStats.avgConfidence}%</span>
+                            <span>Нужно ручной проверки: {activeAnalysisStats.needsReview}</span>
+                          </div>
+                        )}
+
+                        <div className="space-y-2">
+                          {activeSession.analysisResults.map(result => {
+                            const category = checklist?.categories.find(cat => {
+                              const candidateId = cat.id || cat.name
+                              return candidateId === result.categoryId || cat.name === result.categoryId
+                            })
+                            const resolvedCategoryId = category ? (category.id || category.name) : undefined
+                            const criterion = category?.criteria.find(crit => {
+                              const candidateId = crit.id || `${resolvedCategoryId}-${crit.text}`
+                              return candidateId === result.criterionId || crit.text === result.criterionId
+                            })
+                            const statusLabel = result.score === 1 ? 'Выполнено' : result.score === 0 ? 'Не выполнено' : 'Требует проверки'
+                            return (
+                              <div key={`${result.categoryId}-${result.criterionId}`} className="rounded-lg border border-blue-200 bg-white p-3 text-sm dark:border-blue-800 dark:bg-gray-900">
+                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                  <div>
+                                    <p className="font-semibold text-gray-900 dark:text-gray-100">{criterion?.text || 'Критерий из чек-листа'}</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">{category?.name || 'Категория без названия'}</p>
+                                  </div>
+                                  <Badge variant={result.score === 1 ? 'default' : result.score === 0 ? 'destructive' : 'secondary'}>
+                                    {statusLabel}
+                                  </Badge>
+                                </div>
+                                <p className="mt-2 text-gray-700 dark:text-gray-300">{result.explanation}</p>
+                                <div className="mt-2 flex flex-wrap gap-3 text-xs text-gray-500 dark:text-gray-400">
+                                  <span>Уверенность: {result.confidence}%</span>
+                                  {result.needsReview && (
+                                    <span className="text-yellow-600 dark:text-yellow-300">Нужна проверка менеджером</span>
+                                  )}
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </>
                 ) : (
                   <div className="py-12 text-center text-sm text-gray-500 dark:text-gray-300">
@@ -1862,77 +1915,6 @@ export default function TestScoringPage() {
           </div>
         </div>
 
-        <Dialog open={!!analysisModalSession} onOpenChange={(open) => {
-          if (!open) handleCloseAnalysisModal()
-        }}>
-          <DialogContent className="max-w-3xl">
-            <DialogHeader>
-              <DialogTitle>
-                {analysisModalSession?.audioFile?.name || analysisModalSession?.transcriptFile?.name || 'Результаты анализа'}
-              </DialogTitle>
-              <DialogDescription>
-                AI-оценка по чек-листу для выбранного разговора
-              </DialogDescription>
-            </DialogHeader>
-            {analysisModalSession && analysisModalStats ? (
-              <div className="space-y-4">
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-lg bg-green-50 p-3 text-green-900 dark:bg-green-950/40 dark:text-green-100">
-                    <p className="text-xs uppercase">Выполнено</p>
-                    <p className="text-2xl font-bold">{analysisModalStats.passed}</p>
-                  </div>
-                  <div className="rounded-lg bg-red-50 p-3 text-red-900 dark:bg-red-950/40 dark:text-red-100">
-                    <p className="text-xs uppercase">Провалы</p>
-                    <p className="text-2xl font-bold">{analysisModalStats.failed}</p>
-                  </div>
-                  <div className="rounded-lg bg-yellow-50 p-3 text-yellow-900 dark:bg-yellow-950/40 dark:text-yellow-200">
-                    <p className="text-xs uppercase">Неопределённо</p>
-                    <p className="text-2xl font-bold">{analysisModalStats.unclear}</p>
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-3 text-sm text-gray-600 dark:text-gray-300">
-                  <span>Успешность: {analysisModalStats.passRate}%</span>
-                  <span>Средняя уверенность: {analysisModalStats.avgConfidence}%</span>
-                  <span>Нужно ручной проверки: {analysisModalStats.needsReview}</span>
-                </div>
-                <div className="space-y-2">
-                  {analysisModalSession.analysisResults.map(result => {
-                    const category = checklist?.categories.find(cat => {
-                      const candidateId = cat.id || cat.name
-                      return candidateId === result.categoryId || cat.name === result.categoryId
-                    })
-                    const resolvedCategoryId = category ? (category.id || category.name) : undefined
-                    const criterion = category?.criteria.find(crit => {
-                      const candidateId = crit.id || `${resolvedCategoryId}-${crit.text}`
-                      return candidateId === result.criterionId || crit.text === result.criterionId
-                    })
-                    const statusLabel = result.score === 1 ? 'Выполнено' : result.score === 0 ? 'Не выполнено' : 'Требует проверки'
-                    return (
-                      <div key={`${result.categoryId}-${result.criterionId}`} className="rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-gray-900">
-                        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                          <div>
-                            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{criterion?.text || 'Критерий из чек-листа'}</p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">{category?.name || 'Категория без названия'}</p>
-                          </div>
-                          <Badge variant={result.score === 1 ? 'default' : result.score === 0 ? 'destructive' : 'secondary'}>
-                            {statusLabel}
-                          </Badge>
-                        </div>
-                        <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">{result.explanation}</p>
-                        <div className="mt-2 flex flex-wrap gap-3 text-xs text-gray-500 dark:text-gray-400">
-                          <span>Уверенность: {result.confidence}%</span>
-                          {result.needsReview && <span className="text-yellow-600 dark:text-yellow-300">Нужна проверка менеджером</span>}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            ) : (
-              <p className="text-sm text-gray-600 dark:text-gray-300">Нет результатов для отображения.</p>
-            )}
-          </DialogContent>
-        </Dialog>
 
         <BottomControls
           hasResults={hasAnyResults}

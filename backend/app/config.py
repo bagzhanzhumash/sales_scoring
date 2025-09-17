@@ -28,11 +28,12 @@ class Settings(BaseSettings):
     summarization_temperature: float = 0.3
     summarization_top_p: float = 0.9
     summarization_max_tokens: int = 512
-    summarization_timeout: float = 60.0
+    summarization_timeout: float = 300.0
     summarization_system_prompt: str = (
         "You are an expert sales conversation analyst. Provide concise summaries "
         "covering outcomes, action items, sentiment, and any blockers."
     )
+    summarization_required: bool = False
     
     # File upload settings
     max_file_size: int = 100 * 1024 * 1024  # 100MB

@@ -6,13 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { 
   Upload, 
   File, 
   Music, 
   CheckCircle, 
-  AlertTriangle,
   Loader2,
   Plus,
   FolderOpen
@@ -238,32 +236,23 @@ export function FileUploadSection({
                 </div>
               </div>
             ) : (
-              <>
-                <Alert>
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription>
-                    Транскрипт не найден. Нажмите «Запустить транскрибацию», чтобы создать текст из аудио.
-                  </AlertDescription>
-                </Alert>
-
-                <Button 
-                  onClick={onTranscribe}
-                  disabled={isTranscribing}
-                  className="w-full"
-                >
-                  {isTranscribing ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Транскрибация...
-                    </>
-                  ) : (
-                    <>
-                      <File className="h-4 w-4 mr-2" />
-                      Запустить транскрибацию
-                    </>
-                  )}
-                </Button>
-              </>
+              <Button 
+                onClick={onTranscribe}
+                disabled={isTranscribing}
+                className="w-full"
+              >
+                {isTranscribing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Транскрибация...
+                  </>
+                ) : (
+                  <>
+                    <File className="h-4 w-4 mr-2" />
+                    Запустить транскрибацию
+                  </>
+                )}
+              </Button>
             )}
           </div>
         )}

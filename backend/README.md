@@ -179,6 +179,8 @@ ollama pull gemma3:27b
 | `compression_ratio_threshold` | Порог сжатия | 2.4 |
 | `log_prob_threshold` | Порог логарифма вероятности | -1.0 |
 | `no_speech_threshold` | Порог отсутствия речи | 0.6 |
+| `summarization_required` | Прерывать запуск при недоступной LLM-суммаризации | false |
+| `summarization_timeout` | Таймаут ожидания ответа от сервиса суммаризации (сек) | 300 |
 
 Настройки сервиса суммаризации задаются переменными окружения `OLLAMA_BASE_URL`, `SUMMARIZATION_MODEL`, `SUMMARIZATION_MAX_TOKENS`, `SUMMARIZATION_TEMPERATURE` и др. (см. `app/config.py`).
 

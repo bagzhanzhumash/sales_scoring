@@ -4,9 +4,11 @@ import json
 import logging
 import re
 import textwrap
+import time
 from typing import Any, Dict, List, Literal, Optional
 
 import httpx
+from pydantic import ValidationError
 
 from .config import settings
 from .models import (
@@ -14,6 +16,7 @@ from .models import (
     CallSummarizationResponse,
     ChecklistAnalysisRequest,
     ChecklistAnalysisResult,
+    ChecklistAnalysisResponse,
     SummarizationRequest,
     SummarizationResponse,
     SummaryFormat,
@@ -38,6 +41,7 @@ class SummarizationService:
         self.default_top_p = settings.summarization_top_p
         self.default_max_tokens = settings.summarization_max_tokens
         self.timeout = settings.summarization_timeout
+        self.checklist_response_schema = ChecklistAnalysisResponse.model_json_schema()
         self._client: Optional[httpx.AsyncClient] = None
 
     async def _get_client(self) -> httpx.AsyncClient:
@@ -92,21 +96,25 @@ class SummarizationService:
         """Extract a JSON object from the LLM response."""
         try:
             return json.loads(content)
-        except json.JSONDecodeError:
-            pass
+        except json.JSONDecodeError as exc:
+            logger.debug("Direct JSON parse failed: %s", exc)
 
         fenced = re.search(r"```json\s*(.*?)```", content, re.DOTALL)
         if fenced:
             try:
                 return json.loads(fenced.group(1))
-            except json.JSONDecodeError:
-                pass
+            except json.JSONDecodeError as exc:
+                logger.debug("Fenced JSON parse failed: %s", exc)
 
         compact = re.search(r"\{.*\}", content, re.DOTALL)
         if compact:
             try:
                 return json.loads(compact.group(0))
             except json.JSONDecodeError as exc:  # pragma: no cover - defensive guard
+                logger.error(
+                    "Failed to parse JSON from response snippet: %s",
+                    compact.group(0)[:500],
+                )
                 raise SummarizationServiceError("Received malformed JSON from summarization model") from exc
 
         raise SummarizationServiceError("Summarization model did not return JSON output")
@@ -194,31 +202,25 @@ class SummarizationService:
         checklist_payload = request.checklist.model_dump()
         summary_payload = call_summary.model_dump()
 
-        evaluation_prompt = textwrap.dedent(
+        system_message = textwrap.dedent(
             f"""
             {self.system_prompt}
 
-            Ты аналитик контроля качества контакт-центра. На основе транскрипта и
-            структурированной сводки оцени выполнение критериев чек-листа.
+            Ты аналитик контроля качества контакт-центра. Оцени выполнение критериев чек-листа
+            по транскрипту разговора. Всегда возвращай JSON строго в соответствии со схемой,
+            переданной в параметре format — никаких пояснений вне JSON.
 
-            Верни JSON строго в формате:
-            {{
-              "results": [
-                {{
-                  "criterion_id": "<ID критерия из чек-листа>",
-                  "category_id": "<ID категории>",
-                  "score": "pass" | "fail" | "unknown",
-                  "confidence": <целое 0-100>,
-                  "explanation": "Короткое пояснение на русском",
-                  "needs_review": true | false
-                }}
-              ]
-            }}
+            Правила оценки:\n
+            - score = 1, если критерий выполнен;\n
+            - score = 0, если критерий нарушен;\n
+            - score = "?", если недостаточно данных;\n
+            - needs_review = true, если вывод неочевиден или score = "?";\n
+            - explanation — лаконичный комментарий на русском языке.
+            """
+        ).strip()
 
-            Используй "pass", если критерий явно выполнен, "fail" если явное
-            нарушение, и "unknown", если данных недостаточно. Если не уверен,
-            ставь needs_review = true.
-
+        user_message = textwrap.dedent(
+            f"""
             Транскрипт:
             <<<TRANSCRIPT>>>
             {request.transcript_text.strip()}
@@ -233,32 +235,130 @@ class SummarizationService:
         ).strip()
 
         client = await self._get_client()
-        payload: Dict[str, Any] = {
-            "model": self.model_name,
-            "prompt": evaluation_prompt,
-            "stream": False,
-            "options": {
-                "temperature": self.default_temperature,
-                "top_p": self.default_top_p,
-                "num_predict": self.default_max_tokens,
-            },
-        }
+        max_attempts = 3
+        num_predict = max(self.default_max_tokens, 1024)
+        max_tokens_cap = max(num_predict, 4096)
 
-        try:
-            response = await client.post("/api/generate", json=payload)
-            response.raise_for_status()
-        except httpx.HTTPStatusError as exc:
-            logger.error("Checklist evaluation failed: %s", exc.response.text)
-            raise SummarizationServiceError(
-                f"Checklist analysis failed with status {exc.response.status_code}"
-            ) from exc
-        except httpx.HTTPError as exc:
-            logger.error("Error while requesting checklist evaluation: %s", exc)
-            raise SummarizationServiceError("Failed to reach Ollama for checklist analysis") from exc
+        for attempt in range(max_attempts):
+            payload: Dict[str, Any] = {
+                "model": self.model_name,
+                "messages": [
+                    {"role": "system", "content": system_message},
+                    {"role": "user", "content": user_message},
+                ],
+                "stream": False,
+                "format": self.checklist_response_schema,
+                "options": {
+                    "temperature": 0.0,
+                    "top_p": self.default_top_p,
+                    "num_predict": min(num_predict, max_tokens_cap),
+                },
+            }
 
-        raw_output = response.json().get("response", "")
-        parsed = self._extract_json(raw_output)
-        raw_results = parsed.get("results", [])
+            logger.debug(
+                "Submitting checklist evaluation to Ollama (attempt %s/%s): model=%s system_chars=%s user_chars=%s num_predict=%s",
+                attempt + 1,
+                max_attempts,
+                self.model_name,
+                len(system_message),
+                len(user_message),
+                payload["options"]["num_predict"],
+            )
+
+            start_time = time.perf_counter()
+            try:
+                response = await client.post("/api/chat", json=payload)
+                response.raise_for_status()
+                elapsed = time.perf_counter() - start_time
+                logger.info(
+                    "Checklist evaluation completed in %.2fs (status=%s, attempt=%s)",
+                    elapsed,
+                    response.status_code,
+                    attempt + 1,
+                )
+            except httpx.HTTPStatusError as exc:
+                logger.error("Checklist evaluation failed: %s", exc.response.text)
+                raise SummarizationServiceError(
+                    f"Checklist analysis failed with status {exc.response.status_code}"
+                ) from exc
+            except httpx.ReadTimeout as exc:
+                elapsed = time.perf_counter() - start_time
+                logger.error(
+                    "Checklist evaluation timed out after %.2fs (timeout=%.2fs) on attempt %s: %s",
+                    elapsed,
+                    self.timeout,
+                    attempt + 1,
+                    exc,
+                )
+                if attempt + 1 < max_attempts:
+                    num_predict = min(num_predict * 2, max_tokens_cap)
+                    logger.info("Retrying checklist evaluation with increased num_predict=%s", num_predict)
+                    continue
+                raise SummarizationServiceError("Checklist analysis timed out") from exc
+            except httpx.HTTPError as exc:
+                elapsed = time.perf_counter() - start_time
+                logger.error(
+                    "Error while requesting checklist evaluation (elapsed %.2fs, type %s, attempt %s): %s",
+                    elapsed,
+                    exc.__class__.__name__,
+                    attempt + 1,
+                    exc,
+                )
+                raise SummarizationServiceError("Failed to reach Ollama for checklist analysis") from exc
+
+            data = response.json()
+            done_reason = data.get("done_reason")
+            if done_reason:
+                logger.debug("Checklist evaluation done_reason=%s", done_reason)
+
+            message_payload: Dict[str, Any] = data.get("message") or {}
+            message_content = message_payload.get("content") or data.get("response", "")
+
+            logger.debug(
+                "Raw checklist response snippet (first 500 chars): %s",
+                message_content[:500],
+            )
+
+            if not message_content:
+                logger.error("Checklist analysis returned empty response body: %s", data)
+                raise SummarizationServiceError("Checklist analysis returned empty response")
+
+            try:
+                structured = ChecklistAnalysisResponse.model_validate_json(message_content)
+                raw_results = [item.model_dump() for item in structured.results]
+                logger.debug("Checklist response validated via schema (%s items)", len(raw_results))
+                break
+            except ValidationError as exc:
+                logger.warning("Checklist analysis schema validation failed: %s", exc)
+                try:
+                    parsed = self._extract_json(message_content)
+                    raw_results = parsed.get("results", [])
+                    logger.debug("Checklist response parsed via fallback extractor (%s items)", len(raw_results))
+                    break
+                except SummarizationServiceError as parse_exc:
+                    opens_curly = message_content.count("{")
+                    closes_curly = message_content.count("}")
+                    opens_sq = message_content.count("[")
+                    closes_sq = message_content.count("]")
+                    trailing_comma = message_content.rstrip().endswith(",")
+                    truncated = (
+                        done_reason == "length"
+                        or opens_curly > closes_curly
+                        or opens_sq > closes_sq
+                        or trailing_comma
+                    )
+
+                    if truncated and attempt + 1 < max_attempts:
+                        num_predict = min(num_predict * 2, max_tokens_cap)
+                        logger.info(
+                            "Retrying checklist evaluation due to suspected truncation (attempt %s) with num_predict=%s",
+                            attempt + 1,
+                            num_predict,
+                        )
+                        continue
+                    raise parse_exc
+        else:
+            raise SummarizationServiceError("Checklist analysis failed to produce usable results")
 
         normalized: Dict[str, ChecklistAnalysisResult] = {}
         for item in raw_results:
