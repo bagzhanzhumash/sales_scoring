@@ -16,18 +16,17 @@ from ..models import (
     HealthResponse
 )
 from ..whisper_service import WhisperService
+from ..services_gateway import asr_gateway
 from ..utils import validate_audio_file, get_audio_info
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1", tags=["transcription"])
 
-# Global whisper service instance
-whisper_service = WhisperService()
-
 
 async def get_whisper_service() -> WhisperService:
-    """Dependency to get the whisper service."""
+    """Dependency to get the shared whisper service instance."""
+    from ..main import whisper_service  # Imported lazily to avoid circular imports
     if not whisper_service.is_loaded():
         await whisper_service.load_model()
     return whisper_service
@@ -54,8 +53,7 @@ async def transcribe_audio(
     language: str = Form(None, description="Language code (e.g., 'ru', 'en'). Auto-detect if not specified"),
     task: str = Form("transcribe", description="Task type: 'transcribe' or 'translate'"),
     word_timestamps: bool = Form(False, description="Enable word-level timestamps"),
-    initial_prompt: str = Form(None, description="Initial prompt for the model"),
-    service: WhisperService = Depends(get_whisper_service)
+    initial_prompt: str = Form(None, description="Initial prompt for the model")
 ):
     """
     Transcribe a single audio file.
@@ -87,7 +85,6 @@ async def transcribe_audio(
         hotwords: Hotwords for better recognition
         repetition_penalty: Repetition penalty
         no_repeat_ngram_size: No repeat n-gram size
-        service: Whisper service dependency
         
     Returns:
         Transcription result
@@ -124,7 +121,7 @@ async def transcribe_audio(
             )
             
             # Transcribe audio
-            result = await service.transcribe_file(tmp_file.name, request)
+            result = await asr_gateway.transcribe_file(tmp_file.name, request)
             
             # Clean up temporary file
             try:
@@ -147,8 +144,7 @@ async def transcribe_batch_audio(
     language: str = Form(None, description="Language code (e.g., 'ru', 'en'). Auto-detect if not specified"),
     task: str = Form("transcribe", description="Task type: 'transcribe' or 'translate'"),
     word_timestamps: bool = Form(False, description="Enable word-level timestamps"),
-    initial_prompt: str = Form(None, description="Initial prompt for the model"),
-    service: WhisperService = Depends(get_whisper_service)
+    initial_prompt: str = Form(None, description="Initial prompt for the model")
 ):
     """
     Transcribe multiple audio files in batch.
@@ -180,7 +176,6 @@ async def transcribe_batch_audio(
         hotwords: Hotwords for better recognition
         repetition_penalty: Repetition penalty
         no_repeat_ngram_size: No repeat n-gram size
-        service: Whisper service dependency
         
     Returns:
         Batch transcription results
@@ -218,7 +213,7 @@ async def transcribe_batch_audio(
             )
             
             # Transcribe all files
-            result = await service.transcribe_batch(temp_files, request)
+            result = await asr_gateway.transcribe_batch(temp_files, request)
             
             return result
             
@@ -243,8 +238,7 @@ async def transcribe_from_url(
     language: str = Form(None, description="Language code (e.g., 'ru', 'en'). Auto-detect if not specified"),
     task: str = Form("transcribe", description="Task type: 'transcribe' or 'translate'"),
     word_timestamps: bool = Form(False, description="Enable word-level timestamps"),
-    initial_prompt: str = Form(None, description="Initial prompt for the model"),
-    service: WhisperService = Depends(get_whisper_service)
+    initial_prompt: str = Form(None, description="Initial prompt for the model")
 ):
     """
     Transcribe audio from URL.
@@ -276,7 +270,6 @@ async def transcribe_from_url(
         hotwords: Hotwords for better recognition
         repetition_penalty: Repetition penalty
         no_repeat_ngram_size: No repeat n-gram size
-        service: Whisper service dependency
         
     Returns:
         Transcription result
@@ -313,7 +306,7 @@ async def transcribe_from_url(
             )
             
             # Transcribe audio
-            result = await service.transcribe_file(tmp_file.name, request)
+            result = await asr_gateway.transcribe_file(tmp_file.name, request)
             
             # Clean up temporary file
             try:

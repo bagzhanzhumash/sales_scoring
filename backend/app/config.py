@@ -27,8 +27,8 @@ class Settings(BaseSettings):
     summarization_model: str = "gemma3:27b"
     summarization_temperature: float = 0.3
     summarization_top_p: float = 0.9
-    summarization_max_tokens: int = 512
-    summarization_timeout: float = 300.0
+    summarization_max_tokens: int = 8192
+    summarization_timeout: float = 600.0
     summarization_system_prompt: str = (
         """
         You are a meticulous call-analysis engine. Your job is to read a single sales call (or a short brief about it) and return a STRICT, valid JSON object with the following top-level keys:
@@ -125,6 +125,14 @@ class Settings(BaseSettings):
     cors_allow_methods: list = ["*"]
     cors_allow_headers: list = ["*"]
     
+    # RabbitMQ settings
+    rabbitmq_enabled: bool = True
+    rabbitmq_required: bool = False
+    rabbitmq_url: str = "amqp://guest:guest@localhost/"
+    rabbitmq_asr_queue: str = "asr_tasks"
+    rabbitmq_llm_queue: str = "llm_tasks"
+    rabbitmq_rpc_timeout: float = 600.0
+
     # Logging settings
     log_file: str = "speech_recognition.log"
     log_format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

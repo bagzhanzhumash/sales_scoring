@@ -113,27 +113,101 @@ class SummarizationService:
         try:
             return json.loads(content)
         except json.JSONDecodeError as exc:
-            logger.debug("Direct JSON parse failed: %s", exc)
+            pos = getattr(exc, "pos", None)
+            snippet = content[max(pos - 40, 0): pos + 40] if pos is not None else content[:80]
+            logger.debug(
+                "Direct JSON parse failed at pos=%s: %s | snippet=%s",
+                pos,
+                exc,
+                snippet,
+            )
 
         fenced = re.search(r"```json\s*(.*?)```", content, re.DOTALL)
         if fenced:
             try:
                 return json.loads(fenced.group(1))
             except json.JSONDecodeError as exc:
-                logger.debug("Fenced JSON parse failed: %s", exc)
+                logger.debug(
+                    "Fenced JSON parse failed at pos=%s: %s",
+                    getattr(exc, "pos", None),
+                    exc,
+                )
 
         compact = re.search(r"\{.*\}", content, re.DOTALL)
         if compact:
             try:
                 return json.loads(compact.group(0))
             except json.JSONDecodeError as exc:  # pragma: no cover - defensive guard
+                snippet = compact.group(0)
                 logger.error(
-                    "Failed to parse JSON from response snippet: %s",
-                    compact.group(0)[:500],
+                    "Failed to parse JSON from response snippet (length=%s, pos=%s): %s",
+                    len(snippet),
+                    getattr(exc, "pos", None),
+                    snippet[:500],
                 )
                 raise SummarizationServiceError("Received malformed JSON from summarization model") from exc
 
         raise SummarizationServiceError("Summarization model did not return JSON output")
+
+    @staticmethod
+    def _repair_json(content: str) -> Optional[str]:
+        """Attempt to repair truncated or slightly malformed JSON payloads."""
+
+        text = content.rstrip()
+        builder: List[str] = []
+        stack: List[str] = []
+        in_string = False
+        escape = False
+
+        for ch in text:
+            builder.append(ch)
+            if in_string:
+                if escape:
+                    escape = False
+                    continue
+                if ch == "\\":
+                    escape = True
+                    continue
+                if ch == "\"":
+                    in_string = False
+                continue
+
+            if ch == "\"":
+                in_string = True
+            elif ch == "{":
+                stack.append(ch)
+            elif ch == "[":
+                stack.append(ch)
+            elif ch == "}" and stack and stack[-1] == "{":
+                stack.pop()
+            elif ch == "]" and stack and stack[-1] == "[":
+                stack.pop()
+
+        if in_string:
+            builder.append('"')
+            in_string = False
+
+        repaired = "".join(builder).rstrip()
+
+        # Remove trailing commas before object/array terminators.
+        trailing_comma_pattern = re.compile(r",(\s*[}\]])")
+        while True:
+            new_repaired = trailing_comma_pattern.sub(r"\1", repaired)
+            if new_repaired == repaired:
+                break
+            repaired = new_repaired
+
+        if stack:
+            closers = ''.join('}' if opener == '{' else ']' for opener in reversed(stack))
+            repaired += closers
+
+        try:
+            json.loads(repaired)
+        except json.JSONDecodeError as exc:
+            logger.debug("JSON repair attempt failed: %s", exc)
+            return None
+
+        return repaired
 
     async def summarize(self, request: SummarizationRequest) -> SummarizationResponse:
         """Generate a summary for the supplied text."""
@@ -331,7 +405,8 @@ class SummarizationService:
             message_content = message_payload.get("content") or data.get("response", "")
 
             logger.debug(
-                "Raw checklist response snippet (first 500 chars): %s",
+                "Raw checklist response snippet (length=%s, first 500 chars): %s",
+                len(message_content),
                 message_content[:500],
             )
 
@@ -364,6 +439,16 @@ class SummarizationService:
                         or trailing_comma
                     )
 
+                    logger.debug(
+                        "Checklist JSON diagnostics: opens={cu=%s,sq=%s} closes={cu=%s,sq=%s} trailing_comma=%s truncated=%s",
+                        opens_curly,
+                        opens_sq,
+                        closes_curly,
+                        closes_sq,
+                        trailing_comma,
+                        truncated,
+                    )
+
                     if truncated and attempt + 1 < max_attempts:
                         num_predict = min(num_predict * 2, max_tokens_cap)
                         logger.info(
@@ -372,6 +457,24 @@ class SummarizationService:
                             num_predict,
                         )
                         continue
+
+                    repaired = self._repair_json(message_content)
+                    if repaired is not None:
+                        logger.warning(
+                            "Checklist response required repair (delta_chars=%s)",
+                            len(repaired) - len(message_content),
+                        )
+                        try:
+                            parsed = json.loads(repaired)
+                        except json.JSONDecodeError as exc:  # pragma: no cover - defensive guard
+                            logger.error("Repaired checklist JSON failed to parse: %s", exc)
+                        else:
+                            raw_results = parsed.get("results", [])
+                            logger.debug(
+                                "Checklist response parsed after repair (%s items)",
+                                len(raw_results),
+                            )
+                            break
                     raise parse_exc
         else:
             raise SummarizationServiceError("Checklist analysis failed to produce usable results")

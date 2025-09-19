@@ -15,6 +15,11 @@ from .api.analysis import router as analysis_router
 from .api.manager_scorecards import router as manager_scorecards_router
 from .whisper_service import WhisperService
 from .summarization_service import SummarizationServiceError, summarization_service
+from .rabbitmq import (
+    rabbitmq_manager,
+    create_asr_handler,
+    create_llm_handler,
+)
 from .config import settings
 
 # Configure logging
@@ -61,10 +66,33 @@ async def lifespan(app: FastAPI):
             f"{message} - continuing without LLM summarization. Start Ollama and run `ollama pull {settings.summarization_model}` if needed."
         )
 
+    # Initialize RabbitMQ pipelines
+    if settings.rabbitmq_enabled:
+        try:
+            await rabbitmq_manager.start(
+                asr_handler=create_asr_handler(whisper_service),
+                llm_handler=create_llm_handler(summarization_service),
+            )
+            logger.info("RabbitMQ pipelines started")
+        except Exception as e:
+            logger.error(f"Failed to initialize RabbitMQ: {e}")
+            if settings.rabbitmq_required:
+                raise
+            await rabbitmq_manager.disable(
+                reason=f"Failed to initialize RabbitMQ: {e}",
+            )
+            logger.info("Continuing without RabbitMQ; requests will be handled inline")
+    else:
+        await rabbitmq_manager.disable(
+            reason="RabbitMQ disabled via configuration",
+            log_level=logging.INFO,
+        )
+
     yield
     
     # Shutdown
     logger.info("Shutting down Speech Recognition Service...")
+    await rabbitmq_manager.close()
     await summarization_service.close()
 
 

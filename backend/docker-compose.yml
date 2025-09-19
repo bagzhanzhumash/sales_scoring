@@ -15,9 +15,15 @@ services:
       - COMPUTE_TYPE=auto
       - MAX_FILE_SIZE=104857600
       - MAX_BATCH_FILES=10
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq/
+      - RABBITMQ_ASR_QUEUE=asr_tasks
+      - RABBITMQ_LLM_QUEUE=llm_tasks
+      - RABBITMQ_RPC_TIMEOUT=300
     volumes:
       - ./logs:/app/logs
       - ./temp:/tmp/speech_recognition
+    depends_on:
+      - rabbitmq
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
@@ -36,3 +42,13 @@ services:
     depends_on:
       - speech-recognition
     restart: unless-stopped
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    restart: unless-stopped
+
