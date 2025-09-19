@@ -1,0 +1,204 @@
+{
+  "name": "Чек-лист оценки продажи (Sales Call Evaluation)",
+  "description": "Комплексная оценка качества телефонного разговора с клиентом для отдела продаж",
+  "version": "1.0",
+  "language": "ru",
+  "maxScore": 100,
+  "categories": [
+    {
+      "id": "greeting",
+      "name": "Приветствие",
+      "description": "Оценка качества приветствия и установления контакта",
+      "weight": 15,
+      "criteria": [
+        {
+          "id": "greeting_hello",
+          "name": "Поздоровался ли менеджер с клиентом?",
+          "description": "Менеджер вежливо поздоровался с клиентом в начале разговора",
+          "type": "binary",
+          "weight": 5,
+          "required": true
+        },
+        {
+          "id": "greeting_introduction",
+          "name": "Представился ли менеджер клиенту?",
+          "description": "Менеджер назвал свое имя и компанию",
+          "type": "binary",
+          "weight": 5,
+          "required": true
+        },
+        {
+          "id": "greeting_client_name",
+          "name": "Выяснил ли по имени и в процессе разговора?",
+          "description": "Менеджер узнал имя клиента и обращался к нему по имени",
+          "type": "binary",
+          "weight": 5,
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "needs_assessment",
+      "name": "Выявление потребностей",
+      "description": "Оценка качества выявления потребностей клиента",
+      "weight": 25,
+      "criteria": [
+        {
+          "id": "needs_questions",
+          "name": "Выяснил потребности клиента, задал направляющие вопросы?",
+          "description": "Менеджер активно выяснял потребности клиента, задавал открытые и закрытые вопросы",
+          "type": "binary",
+          "weight": 8,
+          "required": true
+        },
+        {
+          "id": "needs_details",
+          "name": "Выяснил ли детали коммуникации?",
+          "description": "Менеджер уточнил детали и особенности потребностей клиента",
+          "type": "binary",
+          "weight": 7,
+          "required": true
+        },
+        {
+          "id": "needs_solution_vision",
+          "name": "Уточнил, как клиент видит решение своей проблемы?",
+          "description": "Менеджер выяснил видение клиента относительно решения его задач",
+          "type": "binary",
+          "weight": 5,
+          "required": false
+        },
+        {
+          "id": "needs_programs_interest",
+          "name": "Интересовался ли участием в различных программах?",
+          "description": "Менеджер выяснил интерес к дополнительным программам и услугам",
+          "type": "binary",
+          "weight": 5,
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "contact_info",
+      "name": "Контакт",
+      "description": "Обмен контактной информацией и установление связи",
+      "weight": 20,
+      "criteria": [
+        {
+          "id": "contact_gave_coordinates",
+          "name": "Дал ли специалист свои координаты клиенту?",
+          "description": "Менеджер предоставил свои контактные данные для дальнейшей связи",
+          "type": "binary",
+          "weight": 7,
+          "required": true
+        },
+        {
+          "id": "contact_recorded_client_data",
+          "name": "Записал ли контактные данные клиента?",
+          "description": "Менеджер получил и записал контактные данные клиента",
+          "type": "binary",
+          "weight": 7,
+          "required": true
+        },
+        {
+          "id": "contact_left_contacts",
+          "name": "Оставил ли свои контакты клиенту?",
+          "description": "Менеджер убедился, что клиент получил его контактные данные",
+          "type": "binary",
+          "weight": 6,
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "professionalism",
+      "name": "Законность",
+      "description": "Оценка профессионализма и культуры общения",
+      "weight": 20,
+      "criteria": [
+        {
+          "id": "professionalism_polite",
+          "name": "Был ли вежлив настроен?",
+          "description": "Менеджер поддерживал вежливый и профессиональный тон на протяжении всего разговора",
+          "type": "binary",
+          "weight": 7,
+          "required": true
+        },
+        {
+          "id": "professionalism_culture",
+          "name": "Демонстрировал ли культуру/профессионализм?",
+          "description": "Менеджер проявлял высокую культуру общения и профессионализм",
+          "type": "binary",
+          "weight": 7,
+          "required": true
+        },
+        {
+          "id": "professionalism_client_opinion",
+          "name": "Интересовался мнением клиента, задавал уточняющие вопросы?",
+          "description": "Менеджер активно интересовался мнением клиента и задавал уточняющие вопросы",
+          "type": "binary",
+          "weight": 6,
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "completion",
+      "name": "Завершение",
+      "description": "Качество завершения разговора и следующие шаги",
+      "weight": 20,
+      "criteria": [
+        {
+          "id": "completion_remaining_questions",
+          "name": "Уточнил, остались ли вопросы?",
+          "description": "Менеджер убедился, что у клиента не осталось вопросов",
+          "type": "binary",
+          "weight": 5,
+          "required": true
+        },
+        {
+          "id": "completion_thanked_goodbye",
+          "name": "Поблагодарил и попрощался с клиентом?",
+          "description": "Менеджер вежливо поблагодарил клиента и попрощался",
+          "type": "binary",
+          "weight": 5,
+          "required": true
+        },
+        {
+          "id": "completion_next_steps",
+          "name": "Убедился в понимании следующих шагов?",
+          "description": "Менеджер четко обозначил следующие шаги и убедился в их понимании",
+          "type": "binary",
+          "weight": 5,
+          "required": true
+        },
+        {
+          "id": "completion_communication_form",
+          "name": "Уведомил клиента о форме связи?",
+          "description": "Менеджер объяснил, как и когда будет осуществляться дальнейшая связь",
+          "type": "binary",
+          "weight": 3,
+          "required": false
+        },
+        {
+          "id": "completion_timeframes",
+          "name": "Проинформировал о сроках (если это было нужно)?",
+          "description": "Менеджер сообщил клиенту временные рамки выполнения задач или следующих действий",
+          "type": "binary",
+          "weight": 2,
+          "required": false
+        }
+      ]
+    }
+  ],
+  "passThreshold": 70,
+  "reviewThreshold": 60,
+  "metadata": {
+    "createdBy": "Sales Department",
+    "createdDate": "2024-12-19",
+    "industry": "Sales & Customer Service",
+    "callType": "Outbound Sales Call",
+    "evaluationFocus": "Sales Process Quality",
+    "targetAudience": "Sales Managers",
+    "estimatedDuration": "5-10 minutes evaluation"
+  }
+} 
