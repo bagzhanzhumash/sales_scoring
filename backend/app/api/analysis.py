@@ -18,13 +18,8 @@ from ..models import (
     ChecklistInput,
     TranscriptionRequest,
 )
-from ..summarization_service import (
-    SummarizationService,
-    SummarizationServiceError,
-    summarization_service,
-)
+from ..services_gateway import asr_gateway, summarization_gateway
 from ..utils import validate_audio_file
-from ..whisper_service import WhisperService
 from .transcription import get_whisper_service
 
 logger = logging.getLogger(__name__)
@@ -32,9 +27,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1", tags=["analysis"])
 
 
-def get_summarization_service() -> SummarizationService:
-    """Dependency injector for the summarization service."""
-    return summarization_service
+def get_summarization_service():
+    """Dependency injector for the summarization RPC client."""
+    return summarization_gateway
 
 
 def _parse_checklist_payload(raw: str) -> ChecklistInput:
@@ -94,15 +89,14 @@ def _build_segments(segments: Optional[List[dict]]) -> List[CallSegment]:
 @router.post("/analysis/checklist", response_model=ChecklistAnalysisResponse)
 async def analyze_against_checklist(
     request: ChecklistAnalysisRequest,
-    service: SummarizationService = Depends(get_summarization_service),
+    service = Depends(get_summarization_service),
 ) -> ChecklistAnalysisResponse:
     """Evaluate transcript text against a provided checklist."""
     try:
         results = await service.score_checklist(request)
         return ChecklistAnalysisResponse(results=results)
-    except SummarizationServiceError as exc:
-        logger.error("Checklist analysis failed: %s", exc)
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except HTTPException:
+        raise
     except Exception as exc:  # pragma: no cover - defensive guard
         logger.exception("Unexpected checklist analysis error")
         raise HTTPException(status_code=500, detail="Failed to evaluate checklist") from exc
@@ -119,8 +113,7 @@ async def analyze_audio_summary(
         description="Action items list (JSON array or newline/semicolon separated string)",
     ),
     decision: Optional[str] = Form(None, description="Known decision or outcome"),
-    service: SummarizationService = Depends(get_summarization_service),
-    whisper: WhisperService = Depends(get_whisper_service),
+    service = Depends(get_summarization_service),
 ) -> AudioAnalysisResponse:
     """Run the end-to-end audio analysis pipeline and return structured results."""
 
@@ -150,7 +143,8 @@ async def analyze_audio_summary(
             await buffer.write(content)
 
         transcription_request = TranscriptionRequest()
-        transcription = await whisper.transcribe_file(temp_path, transcription_request)
+        await get_whisper_service()  # Ensure model is loaded before queue dispatch
+        transcription = await asr_gateway.transcribe_file(temp_path, transcription_request)
 
     finally:
         try:
@@ -171,8 +165,10 @@ async def analyze_audio_summary(
                 segments=call_segments,
             )
         )
-    except SummarizationServiceError as exc:
-        logger.error("Call summary generation failed: %s", exc)
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("Call summary generation failed")
+        raise HTTPException(status_code=500, detail="Failed to generate call summary") from exc
 
     return AudioAnalysisResponse(call_summary=call_summary)
