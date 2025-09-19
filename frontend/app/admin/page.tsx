@@ -61,6 +61,19 @@ function DirectoryContent() {
     }
   }, [persona, router])
 
+  // Show loading state while redirecting to prevent flash
+  if (persona) {
+    return (
+      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-4 py-16 text-slate-100">
+        <div className="mx-auto max-w-6xl">
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-12 text-center text-white/70 backdrop-blur">
+            Перенаправляем...
+          </div>
+        </div>
+      </main>
+    )
+  }
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-4 py-16 text-slate-100">
       <div className="mx-auto max-w-6xl space-y-14">
