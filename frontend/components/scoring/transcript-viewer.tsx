@@ -50,11 +50,13 @@ interface UploadedFile {
 interface TranscriptViewerProps {
   transcriptData: TranscriptData
   audioFile: UploadedFile | null
+  focusTimestamp?: number | null
 }
 
 export function TranscriptViewer({
   transcriptData,
-  audioFile
+  audioFile,
+  focusTimestamp
 }: TranscriptViewerProps) {
   const speakerLabels: Record<TranscriptSegment["speaker"], string> = {
     Operator: "Оператор",
@@ -223,13 +225,39 @@ export function TranscriptViewer({
   const jumpToSegment = useCallback((segment: TranscriptSegment) => {
     seekTo(segment.startTime)
     setActiveSegment(segment.id)
-    
+
     // Scroll to segment
     const element = document.getElementById(`segment-${segment.id}`)
     if (element && scrollAreaRef.current) {
       element.scrollIntoView({ behavior: 'smooth', block: 'center' })
     }
   }, [seekTo])
+
+  useEffect(() => {
+    if (focusTimestamp === null || focusTimestamp === undefined) return
+
+    const target = transcriptData.segments.find(segment =>
+      focusTimestamp >= segment.startTime && focusTimestamp <= segment.endTime
+    ) || transcriptData.segments.find(segment => focusTimestamp <= segment.startTime)
+
+    if (!target) return
+
+    setActiveSegment(target.id)
+
+    const element = document.getElementById(`segment-${target.id}`)
+    if (element && scrollAreaRef.current) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+
+    const audio = audioRef.current
+    if (audio && Number.isFinite(focusTimestamp)) {
+      const boundedTime = Math.max(target.startTime, Math.min(target.endTime, focusTimestamp))
+      audio.pause()
+      audio.currentTime = boundedTime
+      setCurrentTime(boundedTime)
+      setIsPlaying(false)
+    }
+  }, [focusTimestamp, transcriptData.segments])
 
   const formatTime = useCallback((seconds: number) => {
     if (!isFinite(seconds)) return "0:00"

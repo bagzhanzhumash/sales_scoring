@@ -226,11 +226,11 @@ export function GeneralAnalytics({ sessions, checklist }: GeneralAnalyticsProps)
     const secs = Math.floor(seconds % 60)
     
     if (hours > 0) {
-      return `${hours}h ${minutes}m ${secs}s`
+      return `${hours}ч ${minutes}м ${secs}с`
     } else if (minutes > 0) {
-      return `${minutes}m ${secs}s`
+      return `${minutes}м ${secs}с`
     } else {
-      return `${secs}s`
+      return `${secs}с`
     }
   }
 
@@ -252,13 +252,13 @@ export function GeneralAnalytics({ sessions, checklist }: GeneralAnalyticsProps)
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <BarChart3 className="h-5 w-5" />
-            General Analytics
+            Сводная аналитика
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
             <Activity className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500">Upload files to see analytics</p>
+            <p className="text-gray-500">Загрузите файлы, чтобы увидеть аналитику</p>
           </div>
         </CardContent>
       </Card>
@@ -272,13 +272,13 @@ export function GeneralAnalytics({ sessions, checklist }: GeneralAnalyticsProps)
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <BarChart3 className="h-5 w-5" />
-            Performance Overview
+            Общая эффективность
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className={`p-6 rounded-lg border ${getPerformanceBg(analytics.performanceScore)}`}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Overall Performance Score</h3>
+              <h3 className="text-lg font-semibold">Итоговый балл эффективности</h3>
               <div className={`text-3xl font-bold ${getPerformanceColor(analytics.performanceScore)}`}>
                 {analytics.performanceScore}/100
               </div>
@@ -289,28 +289,28 @@ export function GeneralAnalytics({ sessions, checklist }: GeneralAnalyticsProps)
                 <div className="text-2xl font-bold text-blue-600 mb-1">
                   {Math.round(analytics.pipelineCompletion)}%
                 </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Pipeline Complete</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Пайплайн завершён</p>
               </div>
               
               <div className="text-center">
                 <div className="text-2xl font-bold text-green-600 mb-1">
                   {analytics.overallScore}%
                 </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Quality Score</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Качество</p>
               </div>
               
               <div className="text-center">
                 <div className="text-2xl font-bold text-purple-600 mb-1">
                   {analytics.avgConfidence}%
                 </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Avg Confidence</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Средняя уверенность</p>
               </div>
               
               <div className="text-center">
                 <div className="text-2xl font-bold text-orange-600 mb-1">
                   {analytics.failedFiles}
                 </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Failed Files</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Ошибок</p>
               </div>
             </div>
           </div>
@@ -322,7 +322,7 @@ export function GeneralAnalytics({ sessions, checklist }: GeneralAnalyticsProps)
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Activity className="h-5 w-5" />
-            Processing Pipeline
+            Ход обработки
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -330,25 +330,25 @@ export function GeneralAnalytics({ sessions, checklist }: GeneralAnalyticsProps)
             <div className="text-center p-4 border rounded-lg">
               <FileAudio className="h-8 w-8 text-blue-600 mx-auto mb-2" />
               <div className="text-2xl font-bold text-blue-600">{analytics.audioFiles}</div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Audio Files</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Аудио</p>
             </div>
             
             <div className="text-center p-4 border rounded-lg">
               <FileText className="h-8 w-8 text-green-600 mx-auto mb-2" />
               <div className="text-2xl font-bold text-green-600">{analytics.transcribedFiles}</div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Transcribed</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Транскрибировано</p>
             </div>
             
             <div className="text-center p-4 border rounded-lg">
               <Bot className="h-8 w-8 text-purple-600 mx-auto mb-2" />
               <div className="text-2xl font-bold text-purple-600">{analytics.analyzedFiles}</div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Analyzed</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Анализ готов</p>
             </div>
             
             <div className="text-center p-4 border rounded-lg">
               <Timer className="h-8 w-8 text-orange-600 mx-auto mb-2" />
               <div className="text-2xl font-bold text-orange-600">{analytics.processingFiles}</div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Processing</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">В очереди</p>
             </div>
           </div>
 
@@ -356,20 +356,20 @@ export function GeneralAnalytics({ sessions, checklist }: GeneralAnalyticsProps)
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Pipeline Completion</span>
-              <span className="text-sm text-gray-500">{analytics.analyzedFiles}/{analytics.totalFiles} files</span>
+              <span className="text-sm font-medium">Завершённый пайплайн</span>
+              <span className="text-sm text-gray-500">{analytics.analyzedFiles}/{analytics.totalFiles} файлов</span>
             </div>
             <Progress value={analytics.pipelineCompletion} className="h-3" />
             
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Transcription Rate</span>
-              <span className="text-sm text-gray-500">{analytics.transcribedFiles}/{analytics.totalFiles} files</span>
+              <span className="text-sm font-medium">Доля транскрибации</span>
+              <span className="text-sm text-gray-500">{analytics.transcribedFiles}/{analytics.totalFiles} файлов</span>
             </div>
             <Progress value={analytics.transcriptionRate} className="h-3" />
             
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Analysis Rate</span>
-              <span className="text-sm text-gray-500">{analytics.analyzedFiles}/{analytics.transcribedFiles} files</span>
+              <span className="text-sm font-medium">Доля анализа</span>
+              <span className="text-sm text-gray-500">{analytics.analyzedFiles}/{analytics.transcribedFiles} файлов</span>
             </div>
             <Progress value={analytics.analysisRate} className="h-3" />
           </div>
@@ -381,7 +381,7 @@ export function GeneralAnalytics({ sessions, checklist }: GeneralAnalyticsProps)
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Target className="h-5 w-5" />
-            Quality Metrics
+            Показатели качества
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -393,7 +393,7 @@ export function GeneralAnalytics({ sessions, checklist }: GeneralAnalyticsProps)
                     <CheckCircle className="h-5 w-5 text-green-600 mr-1" />
                     <span className="text-2xl font-bold text-green-600">{analytics.passedCriteria}</span>
                   </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Passed</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Выполнено</p>
                 </div>
                 
                 <div className="text-center">
@@ -401,7 +401,7 @@ export function GeneralAnalytics({ sessions, checklist }: GeneralAnalyticsProps)
                     <XCircle className="h-5 w-5 text-red-600 mr-1" />
                     <span className="text-2xl font-bold text-red-600">{analytics.failedCriteria}</span>
                   </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Failed</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Провалы</p>
                 </div>
                 
                 <div className="text-center">
@@ -409,7 +409,7 @@ export function GeneralAnalytics({ sessions, checklist }: GeneralAnalyticsProps)
                     <HelpCircle className="h-5 w-5 text-yellow-600 mr-1" />
                     <span className="text-2xl font-bold text-yellow-600">{analytics.reviewCriteria}</span>
                   </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Review</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">На проверке</p>
                 </div>
                 
                 <div className="text-center">
@@ -417,7 +417,7 @@ export function GeneralAnalytics({ sessions, checklist }: GeneralAnalyticsProps)
                     <Users className="h-5 w-5 text-purple-600 mr-1" />
                     <span className="text-2xl font-bold text-purple-600">{analytics.editedCriteria}</span>
                   </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Edited</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Отредактировано</p>
                 </div>
               </div>
 
@@ -426,24 +426,24 @@ export function GeneralAnalytics({ sessions, checklist }: GeneralAnalyticsProps)
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="text-center p-4 border rounded-lg">
                   <div className="text-xl font-bold text-green-600 mb-1">{analytics.overallScore}%</div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Overall Score</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Итоговый балл</p>
                 </div>
                 
                 <div className="text-center p-4 border rounded-lg">
                   <div className="text-xl font-bold text-blue-600 mb-1">{analytics.avgConfidence}%</div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Avg Confidence</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Средняя уверенность</p>
                 </div>
                 
                 <div className="text-center p-4 border rounded-lg">
                   <div className="text-xl font-bold text-orange-600 mb-1">{analytics.reviewRate}%</div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Review Rate</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Доля проверок</p>
                 </div>
               </div>
             </>
           ) : (
             <div className="text-center py-8">
               <AlertTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">No analysis results yet</p>
+              <p className="text-gray-500">Анализ ещё не выполнен</p>
             </div>
           )}
         </CardContent>
@@ -454,7 +454,7 @@ export function GeneralAnalytics({ sessions, checklist }: GeneralAnalyticsProps)
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Clock className="h-5 w-5" />
-            Processing Metrics
+            Метрики обработки
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -463,28 +463,28 @@ export function GeneralAnalytics({ sessions, checklist }: GeneralAnalyticsProps)
               <div className="text-xl font-bold text-blue-600 mb-1">
                 {formatDuration(analytics.totalDuration)}
               </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Total Audio Duration</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Суммарная длительность</p>
             </div>
             
             <div className="text-center p-4 border rounded-lg">
               <div className="text-xl font-bold text-green-600 mb-1">
                 {analytics.totalWordCount.toLocaleString()}
               </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Total Words</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Всего слов</p>
             </div>
             
             <div className="text-center p-4 border rounded-lg">
               <div className="text-xl font-bold text-purple-600 mb-1">
                 {analytics.avgTranscriptConfidence}%
               </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Transcript Quality</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Качество транскриптов</p>
             </div>
             
             <div className="text-center p-4 border rounded-lg">
               <div className="text-xl font-bold text-orange-600 mb-1">
                 {formatFileSize(analytics.totalFileSize)}
               </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Total File Size</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Общий размер файлов</p>
             </div>
           </div>
         </CardContent>
@@ -495,7 +495,7 @@ export function GeneralAnalytics({ sessions, checklist }: GeneralAnalyticsProps)
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Activity className="h-5 w-5" />
-            System Health
+            Состояние системы
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -506,10 +506,10 @@ export function GeneralAnalytics({ sessions, checklist }: GeneralAnalyticsProps)
                   <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5" />
                   <div>
                     <p className="font-medium text-red-800 dark:text-red-200">
-                      {analytics.failedFiles} file(s) failed processing
+                      {analytics.failedFiles} файлов не обработаны
                     </p>
                     <p className="text-sm text-red-700 dark:text-red-300 mt-1">
-                      Check file formats and sizes. Consider re-uploading problematic files.
+                      Проверьте формат и размер файлов. Попробуйте загрузить проблемные записи повторно.
                     </p>
                   </div>
                 </div>
@@ -522,10 +522,10 @@ export function GeneralAnalytics({ sessions, checklist }: GeneralAnalyticsProps)
                   <HelpCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
                   <div>
                     <p className="font-medium text-yellow-800 dark:text-yellow-200">
-                      High review rate ({analytics.reviewRate}%)
+                      Высокая доля ручной проверки ({analytics.reviewRate}%)
                     </p>
                     <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-                      Consider improving checklist criteria or audio quality for better analysis.
+                      Проверьте формулировки чек-листа и качество аудио, чтобы снизить количество проверок.
                     </p>
                   </div>
                 </div>
@@ -538,10 +538,10 @@ export function GeneralAnalytics({ sessions, checklist }: GeneralAnalyticsProps)
                   <ThumbsUp className="h-5 w-5 text-green-600 mt-0.5" />
                   <div>
                     <p className="font-medium text-green-800 dark:text-green-200">
-                      Excellent AI Performance
+                      Отличная работа AI
                     </p>
                     <p className="text-sm text-green-700 dark:text-green-300 mt-1">
-                      High confidence scores and low manual override rate indicate optimal analysis quality.
+                      Высокая уверенность и низкая доля ручных правок подтверждают стабильное качество анализа.
                     </p>
                   </div>
                 </div>
@@ -554,10 +554,10 @@ export function GeneralAnalytics({ sessions, checklist }: GeneralAnalyticsProps)
                   <Zap className="h-5 w-5 text-blue-600 mt-0.5" />
                   <div>
                     <p className="font-medium text-blue-800 dark:text-blue-200">
-                      High Processing Efficiency
+                      Высокая скорость обработки
                     </p>
                     <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                      {analytics.pipelineCompletion.toFixed(1)}% of files have completed the full analysis pipeline.
+                      {analytics.pipelineCompletion.toFixed(1)}% файлов прошли полный цикл обработки.
                     </p>
                   </div>
                 </div>
