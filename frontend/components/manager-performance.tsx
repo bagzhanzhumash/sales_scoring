@@ -32,6 +32,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
   Select,
   SelectContent,
@@ -40,274 +41,323 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
+// Enhanced performance data with more timepoints like in the images
 const performanceData = [
-  { month: "Jan", "Emily Chen": 81, "David Kim": 73, "Alex Rodriguez": 78 },
-  { month: "Feb", "Emily Chen": 76, "David Kim": 75, "Alex Rodriguez": 70 },
-  { month: "Mar", "Emily Chen": 82, "David Kim": 78, "Alex Rodriguez": 75 },
-  { month: "Apr", "Emily Chen": 79, "David Kim": 80, "Alex Rodriguez": 77 },
-  { month: "May", "Emily Chen": 85, "David Kim": 81, "Alex Rodriguez": 79 },
-  { month: "Jun", "Emily Chen": 87, "David Kim": 79, "Alex Rodriguez": 82 },
-  { month: "Jul", "Emily Chen": 84, "David Kim": 82, "Alex Rodriguez": 83 },
-  { month: "Aug", "Emily Chen": 88, "David Kim": 83, "Alex Rodriguez": 80 },
-  { month: "Sep", "Emily Chen": 86, "David Kim": 85, "Alex Rodriguez": 81 },
+  { date: "Nov 01", "Cameron Williamson": 100, "Annette Black": 85, "Jenny Wilson": 70, "Ralph Edwards": 85, "Albert Flores": 65, "Jane Cooper": 80 },
+  { date: "Nov 02", "Cameron Williamson": 95, "Annette Black": 88, "Jenny Wilson": 72, "Ralph Edwards": 83, "Albert Flores": 68, "Jane Cooper": 78 },
+  { date: "Nov 03", "Cameron Williamson": 98, "Annette Black": 90, "Jenny Wilson": 75, "Ralph Edwards": 85, "Albert Flores": 70, "Jane Cooper": 82 },
+  { date: "Nov 04", "Cameron Williamson": 92, "Annette Black": 87, "Jenny Wilson": 68, "Ralph Edwards": 80, "Albert Flores": 65, "Jane Cooper": 75 },
+  { date: "Nov 05", "Cameron Williamson": 96, "Annette Black": 92, "Jenny Wilson": 78, "Ralph Edwards": 88, "Albert Flores": 72, "Jane Cooper": 85 },
+  { date: "Nov 06", "Cameron Williamson": 94, "Annette Black": 89, "Jenny Wilson": 76, "Ralph Edwards": 86, "Albert Flores": 69, "Jane Cooper": 81 },
+  { date: "Nov 07", "Cameron Williamson": 97, "Annette Black": 91, "Jenny Wilson": 74, "Ralph Edwards": 84, "Albert Flores": 71, "Jane Cooper": 83 },
+  { date: "Nov 08", "Cameron Williamson": 93, "Annette Black": 86, "Jenny Wilson": 77, "Ralph Edwards": 87, "Albert Flores": 73, "Jane Cooper": 79 },
+  { date: "Nov 15", "Cameron Williamson": 89, "Annette Black": 84, "Jenny Wilson": 65, "Ralph Edwards": 82, "Albert Flores": 67, "Jane Cooper": 76 },
+  { date: "Nov 22", "Cameron Williamson": 91, "Annette Black": 88, "Jenny Wilson": 73, "Ralph Edwards": 85, "Albert Flores": 70, "Jane Cooper": 80 },
+  { date: "Nov 28", "Cameron Williamson": 95, "Annette Black": 90, "Jenny Wilson": 75, "Ralph Edwards": 88, "Albert Flores": 74, "Jane Cooper": 84 },
 ]
 
-const conversionData = [
-  { name: "Emily Chen", calls: 125, deals: 36, conversion: 28.8 },
-  { name: "David Kim", calls: 118, deals: 28, conversion: 23.7 },
-  { name: "Alex Rodriguez", calls: 132, deals: 31, conversion: 23.5 },
-  { name: "Sarah Johnson", calls: 92, deals: 24, conversion: 26.1 },
-  { name: "Michael Lee", calls: 105, deals: 22, conversion: 21.0 },
+// Simplified manager data with fewer columns
+const managersData = [
+  { 
+    name: "Cameron Williamson", 
+    calls: 232, 
+    flagCalls: 21, 
+    redFlags: 21, 
+    dismissed: 21, 
+    avgDuration: 3.3, 
+    avgScore: 21,
+    compliance: 34, 
+    hostileApproach: 34,
+    objectionHandling: 25,
+    empathyDeficit: 25
+  },
+  { 
+    name: "Annette Black", 
+    calls: 232, 
+    flagCalls: 10, 
+    redFlags: 10, 
+    dismissed: 10, 
+    avgDuration: 23.3, 
+    avgScore: 21,
+    compliance: 46, 
+    hostileApproach: 13,
+    objectionHandling: 13,
+    empathyDeficit: 13
+  },
+  { 
+    name: "Jenny Wilson", 
+    calls: 232, 
+    flagCalls: 1, 
+    redFlags: 1, 
+    dismissed: 1, 
+    avgDuration: 13.3, 
+    avgScore: 21,
+    compliance: 70, 
+    hostileApproach: 6,
+    objectionHandling: 6,
+    empathyDeficit: 6
+  },
+  { 
+    name: "Ralph Edwards", 
+    calls: 232, 
+    flagCalls: 15, 
+    redFlags: 15, 
+    dismissed: 15, 
+    avgDuration: 3.3, 
+    avgScore: 21,
+    compliance: 46, 
+    hostileApproach: 21,
+    objectionHandling: 21,
+    empathyDeficit: 21
+  },
+  { 
+    name: "Albert Flores", 
+    calls: 232, 
+    flagCalls: 39, 
+    redFlags: 39, 
+    dismissed: 39, 
+    avgDuration: 33.3, 
+    avgScore: 21,
+    compliance: 1, 
+    hostileApproach: 18,
+    objectionHandling: 18,
+    empathyDeficit: 18
+  },
+  { 
+    name: "Jane Cooper", 
+    calls: 232, 
+    flagCalls: 24, 
+    redFlags: 24, 
+    dismissed: 24, 
+    avgDuration: 1.3, 
+    avgScore: 21,
+    compliance: 40, 
+    hostileApproach: 32,
+    objectionHandling: 32,
+    empathyDeficit: 32
+  }
 ]
 
-const skillRadarData = [
-  { skill: "Discovery", "Emily Chen": 82, "David Kim": 75, "Alex Rodriguez": 80, "Team Average": 78 },
-  { skill: "Objection Handling", "Emily Chen": 78, "David Kim": 85, "Alex Rodriguez": 72, "Team Average": 76 },
-  { skill: "Product Knowledge", "Emily Chen": 90, "David Kim": 82, "Alex Rodriguez": 85, "Team Average": 84 },
-  { skill: "Closing", "Emily Chen": 75, "David Kim": 88, "Alex Rodriguez": 78, "Team Average": 80 },
-  { skill: "Follow-up", "Emily Chen": 85, "David Kim": 76, "Alex Rodriguez": 70, "Team Average": 75 },
-]
-
-const topPerformers = [
-  { name: "Emily Chen", score: 86, deals: 12, revenue: "$147,500" },
-  { name: "David Kim", score: 85, deals: 9, revenue: "$115,000" },
-  { name: "Alex Rodriguez", score: 81, deals: 10, revenue: "$128,200" },
-  { name: "Sarah Johnson", score: 79, deals: 8, revenue: "$98,700" },
-  { name: "Michael Lee", score: 76, deals: 7, revenue: "$87,500" },
-]
-
-const teamSkillBreakdown = [
-  { name: "Discovery", value: 78 },
-  { name: "Objection Handling", value: 76 },
-  { name: "Product Knowledge", value: 84 },
-  { name: "Closing", value: 80 },
-  { name: "Follow-up", value: 75 },
-]
+// Colors for different metrics and managers
+const managerColors = {
+  "Cameron Williamson": "#8884d8",
+  "Annette Black": "#82ca9d", 
+  "Jenny Wilson": "#ffc658",
+  "Ralph Edwards": "#ff7300",
+  "Albert Flores": "#00ff00",
+  "Jane Cooper": "#0088fe"
+}
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"]
 
 export function ManagerPerformance() {
-  const [selectedManager, setSelectedManager] = React.useState<string>("all")
+  const [selectedCategory, setSelectedCategory] = React.useState<string>("All")
+  const [selectedManager, setSelectedManager] = React.useState<string | null>(null)
 
   return (
-    <Card className="w-full">
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
+    <div className="w-full space-y-6">
+      {/* Header Section */}
+      <div className="flex items-center justify-between">
         <div>
-          <CardTitle>Manager Performance</CardTitle>
-          <CardDescription>
-            Sales performance metrics across your team
-          </CardDescription>
+          <h2 className="text-2xl font-bold">Call Quality Dashboard</h2>
+          <p className="text-muted-foreground">Sales managers performance monitoring</p>
         </div>
-        <Select
-          value={selectedManager}
-          onValueChange={setSelectedManager}
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="All Managers" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Managers</SelectItem>
-            <SelectItem value="Emily Chen">Emily Chen</SelectItem>
-            <SelectItem value="David Kim">David Kim</SelectItem>
-            <SelectItem value="Alex Rodriguez">Alex Rodriguez</SelectItem>
-            <SelectItem value="Sarah Johnson">Sarah Johnson</SelectItem>
-            <SelectItem value="Michael Lee">Michael Lee</SelectItem>
-          </SelectContent>
-        </Select>
-      </CardHeader>
-      <CardContent>
-        <Tabs defaultValue="trends" className="w-full">
-          <TabsList className="w-full grid grid-cols-4 mb-6">
-            <TabsTrigger value="trends">Performance Trends</TabsTrigger>
-            <TabsTrigger value="conversion">Conversion</TabsTrigger>
-            <TabsTrigger value="skills">Skills Analysis</TabsTrigger>
-            <TabsTrigger value="rankings">Team Rankings</TabsTrigger>
+        <div className="flex items-center gap-4">
+          <span className="text-sm text-muted-foreground">01 Nov 2024 - 28 Nov 2024</span>
+          <Button variant="outline" size="sm">Export</Button>
+        </div>
+      </div>
+
+      {/* Category Tabs */}
+      <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="w-full">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="All">All</TabsTrigger>
+          <TabsTrigger value="Compliance">Compliance</TabsTrigger>
+          <TabsTrigger value="Product Knowledge">Product Knowledge</TabsTrigger>
+          <TabsTrigger value="Process Adherence">Process Adherence</TabsTrigger>
+          <TabsTrigger value="Soft Skills">Soft Skills</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="trends" className="space-y-4">
-            <div className="h-[400px]">
-              <h3 className="text-sm font-medium mb-2">Monthly Performance Scores</h3>
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={performanceData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis domain={[60, 100]} />
-                  <Tooltip formatter={(value) => [`${value}%`, 'Score']} />
-                  <Legend />
-                  <Line type="monotone" dataKey="Emily Chen" stroke="#8884d8" activeDot={{ r: 8 }} />
-                  <Line type="monotone" dataKey="David Kim" stroke="#82ca9d" />
-                  <Line type="monotone" dataKey="Alex Rodriguez" stroke="#ffc658" />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="conversion" className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="h-[350px]">
-                <h3 className="text-sm font-medium mb-2">Call-to-Deal Conversion Rate</h3>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={conversionData}
-                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis domain={[0, 35]} unit="%" />
-                    <Tooltip formatter={(value, name) => [`${value}${name === "conversion" ? "%" : ""}`, name]} />
-                    <Legend />
-                    <Bar name="Conversion Rate" dataKey="conversion" fill="#8884d8">
-                      {conversionData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-
-              <div className="h-[350px]">
-                <h3 className="text-sm font-medium mb-2">Calls vs Deals (30 days)</h3>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={conversionData}
-                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar name="Total Calls" dataKey="calls" fill="#8884d8" />
-                    <Bar name="Closed Deals" dataKey="deals" fill="#82ca9d" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="skills" className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="h-[350px]">
-                <h3 className="text-sm font-medium mb-2">Team Skill Breakdown</h3>
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={teamSkillBreakdown}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                      label={({name, percent}) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                    >
-                      {teamSkillBreakdown.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => [`${value}%`, 'Score']} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-
-              <div>
-                <h3 className="text-sm font-medium mb-4">Individual Skill Scores</h3>
-                <div className="space-y-6">
-                  {skillRadarData.map((item) => (
-                    <div key={item.skill} className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-sm font-medium">{item.skill}</span>
-                        <span className="text-sm text-muted-foreground">Team Avg: {item["Team Average"]}%</span>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2">
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-xs">
-                            <span>Emily Chen</span>
-                            <span className={getScoreColor(item["Emily Chen"])}>{item["Emily Chen"]}%</span>
-                          </div>
-                          <div className="h-1.5 w-full rounded-full bg-muted">
-                            <div
-                              className={`h-1.5 rounded-full ${getScoreBarColor(item["Emily Chen"])}`}
-                              style={{ width: `${item["Emily Chen"]}%` }}
-                            ></div>
-                          </div>
-                        </div>
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-xs">
-                            <span>David Kim</span>
-                            <span className={getScoreColor(item["David Kim"])}>{item["David Kim"]}%</span>
-                          </div>
-                          <div className="h-1.5 w-full rounded-full bg-muted">
-                            <div
-                              className={`h-1.5 rounded-full ${getScoreBarColor(item["David Kim"])}`}
-                              style={{ width: `${item["David Kim"]}%` }}
-                            ></div>
-                          </div>
-                        </div>
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-xs">
-                            <span>Alex R.</span>
-                            <span className={getScoreColor(item["Alex Rodriguez"])}>{item["Alex Rodriguez"]}%</span>
-                          </div>
-                          <div className="h-1.5 w-full rounded-full bg-muted">
-                            <div
-                              className={`h-1.5 rounded-full ${getScoreBarColor(item["Alex Rodriguez"])}`}
-                              style={{ width: `${item["Alex Rodriguez"]}%` }}
-                            ></div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+        <TabsContent value={selectedCategory} className="space-y-6">
+          {/* Performance Chart */}
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">
+                  Nov 09, Mon
                 </div>
-              </div>
+                <div className="text-right">
+                  <div className="text-sm">Calls: 120</div>
+                  <div className="text-sm">Calls with Red Flags: 70% 85</div>
+                  <div className="text-sm">All Red Flags: 245</div>
+                  <div className="text-sm">Average Red Flags/Call: 3.3</div>
             </div>
-          </TabsContent>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[400px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={performanceData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis domain={[0, 100]} />
+                    <Tooltip formatter={(value) => [`${value}%`, 'Score']} />
+                    <Legend />
+                    {Object.keys(managerColors).map((manager) => (
+                      <Line 
+                        key={manager}
+                        type="monotone" 
+                        dataKey={manager} 
+                        stroke={managerColors[manager as keyof typeof managerColors]} 
+                        strokeWidth={2}
+                        dot={{ r: 4 }}
+                      />
+                    ))}
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
 
-          <TabsContent value="rankings" className="space-y-4">
-            <div>
-              <h3 className="text-sm font-medium mb-4">Top Performers (Current Month)</h3>
-              <div className="overflow-hidden rounded-md border">
+          {/* Manager Performance Table */}
+          <Card>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="bg-muted/50">
-                      <th className="p-3 text-left font-medium text-sm">Manager</th>
-                      <th className="p-3 text-right font-medium text-sm">Score</th>
-                      <th className="p-3 text-right font-medium text-sm">Deals</th>
-                      <th className="p-3 text-right font-medium text-sm">Revenue</th>
+                    <tr className="border-b bg-muted/50">
+                      <th className="p-3 text-left font-medium text-sm">Name</th>
+                      <th className="p-3 text-right font-medium text-sm">Calls</th>
+                      <th className="p-3 text-right font-medium text-sm">Flag Calls</th>
+                      <th className="p-3 text-right font-medium text-sm">Red Flags</th>
+                      <th className="p-3 text-right font-medium text-sm">Dismissed</th>
+                      <th className="p-3 text-right font-medium text-sm">Avg Duration</th>
+                      <th className="p-3 text-right font-medium text-sm">Avg Score</th>
+                      <th className="p-3 text-center font-medium text-sm">Compliance</th>
+                      <th className="p-3 text-center font-medium text-sm">Hostile approach</th>
+                      <th className="p-3 text-center font-medium text-sm">Objection handling</th>
+                      <th className="p-3 text-center font-medium text-sm">Empathy deficit</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {topPerformers.map((person, index) => (
-                      <tr key={person.name} className={index % 2 === 0 ? "bg-muted/20" : ""}>
-                        <td className="p-3 text-sm">
-                          <div className="font-medium">{person.name}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {index === 0 ? "Top performer" :
-                             index === 1 ? "Second place" :
-                             index === 2 ? "Third place" : ""}
+                    {managersData.map((manager, index) => (
+                      <tr 
+                        key={manager.name} 
+                        className={`${index % 2 === 0 ? "bg-muted/20" : ""} hover:bg-muted/30 cursor-pointer`}
+                        onClick={() => setSelectedManager(manager.name)}
+                      >
+                        <td className="p-3 text-sm font-medium">{manager.name}</td>
+                        <td className="p-3 text-right text-sm">{manager.calls}</td>
+                        <td className="p-3 text-right text-sm">{manager.flagCalls}</td>
+                        <td className="p-3 text-right text-sm">{manager.redFlags}</td>
+                        <td className="p-3 text-right text-sm">{manager.dismissed}</td>
+                        <td className="p-3 text-right text-sm">{manager.avgDuration}</td>
+                        <td className="p-3 text-right text-sm">{manager.avgScore}%</td>
+                        <td className="p-3 text-center">
+                          <div className="flex items-center justify-center">
+                            <div className={`h-6 w-12 rounded-full ${getProgressBarColor(manager.compliance)}`}>
+                              <div 
+                                className="h-full bg-current rounded-full opacity-80"
+                                style={{ width: `${manager.compliance}%` }}
+                              />
+                            </div>
+                            <span className="ml-2 text-xs">{manager.compliance}</span>
                           </div>
                         </td>
-                        <td className="p-3 text-right font-medium text-sm">{person.score}%</td>
-                        <td className="p-3 text-right text-sm">{person.deals}</td>
-                        <td className="p-3 text-right text-sm">{person.revenue}</td>
+                        <td className="p-3 text-center">
+                          <div className="flex items-center justify-center">
+                            <div className={`h-6 w-12 rounded-full ${getProgressBarColor(manager.hostileApproach)}`}>
+                              <div 
+                                className="h-full bg-current rounded-full opacity-80"
+                                style={{ width: `${manager.hostileApproach}%` }}
+                              />
+                            </div>
+                            <span className="ml-2 text-xs">{manager.hostileApproach}</span>
+                          </div>
+                        </td>
+                        <td className="p-3 text-center">
+                          <div className="flex items-center justify-center">
+                            <div className={`h-6 w-12 rounded-full ${getProgressBarColor(manager.objectionHandling)}`}>
+                              <div 
+                                className="h-full bg-current rounded-full opacity-80"
+                                style={{ width: `${manager.objectionHandling}%` }}
+                              />
+                            </div>
+                            <span className="ml-2 text-xs">{manager.objectionHandling}</span>
+                          </div>
+                        </td>
+                        <td className="p-3 text-center">
+                          <div className="flex items-center justify-center">
+                            <div className={`h-6 w-12 rounded-full ${getProgressBarColor(manager.empathyDeficit)}`}>
+                              <div 
+                                className="h-full bg-current rounded-full opacity-80"
+                                style={{ width: `${manager.empathyDeficit}%` }}
+                              />
+                            </div>
+                            <span className="ml-2 text-xs">{manager.empathyDeficit}</span>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-              <div className="text-xs text-muted-foreground mt-2">
-                Based on overall performance score combining call quality, conversion rate and customer feedback.
+            </CardContent>
+          </Card>
+
+          {/* Selected Manager Detail */}
+          {selectedManager && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Call Quality: {selectedManager}</CardTitle>
+                <div className="flex gap-4 text-sm">
+                  <span>Statistics</span>
+                  <span>List</span>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-4 gap-4 mb-6">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-red-500">21</div>
+                    <div className="text-xs text-muted-foreground">Red Flags</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-500">232</div>
+                    <div className="text-xs text-muted-foreground">Flag Calls</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-500">21</div>
+                    <div className="text-xs text-muted-foreground">Dismissed</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-purple-500">21%</div>
+                    <div className="text-xs text-muted-foreground">Avg Score</div>
               </div>
             </div>
+                
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={performanceData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="date" />
+                      <YAxis domain={[0, 100]} />
+                      <Tooltip formatter={(value) => [`${value}%`, 'Score']} />
+                      <Line 
+                        type="monotone" 
+                        dataKey={selectedManager} 
+                        stroke={managerColors[selectedManager as keyof typeof managerColors]} 
+                        strokeWidth={3}
+                        dot={{ r: 6 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          )}
           </TabsContent>
         </Tabs>
-      </CardContent>
-      <CardFooter className="flex justify-between">
-        <span className="text-sm text-muted-foreground">Data updated daily</span>
-        <Badge variant="outline" className="cursor-pointer">Download detailed report</Badge>
-      </CardFooter>
-    </Card>
+    </div>
   )
 }
 
@@ -321,4 +371,11 @@ function getScoreBarColor(score: number): string {
   if (score >= 85) return "bg-green-500";
   if (score >= 75) return "bg-amber-500";
   return "bg-red-500";
+}
+
+function getProgressBarColor(score: number): string {
+  if (score >= 80) return "text-green-500";
+  if (score >= 60) return "text-yellow-500";
+  if (score >= 40) return "text-orange-500";
+  return "text-red-500";
 }

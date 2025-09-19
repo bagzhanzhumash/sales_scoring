@@ -43,6 +43,7 @@ import { GeneralAnalytics } from "@/components/scoring/general-analytics"
 import { FileStatistics } from "@/components/scoring/file-statistics"
 import { TranscriptViewer } from "@/components/scoring/transcript-viewer"
 import { BottomControls } from "@/components/scoring/bottom-controls"
+import { ManagerPerformance } from "@/components/manager-performance"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -51,7 +52,8 @@ import { Progress } from "@/components/ui/progress"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { AlertTriangle, Sparkles, MessageSquare, FileAudio, FileText, Trash2, BarChart3, Users, ChevronLeft, ChevronRight, Search, List, Grid, Loader2, Zap, Check } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { AlertTriangle, Sparkles, MessageSquare, FileAudio, FileText, Trash2, BarChart3, Users, ChevronLeft, ChevronRight, Search, List, Grid, Loader2, Zap, Check, UserCheck } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import type { Checklist } from "@/types/projects"
 
@@ -1179,6 +1181,21 @@ export default function TestScoringPage() {
           <h1 className="text-3xl font-bold">Анализ качества работы менеджера для руководителей</h1>
         </div>
 
+        {/* Main Tabs */}
+        <Tabs defaultValue="call-analysis" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="call-analysis" className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" />
+              Call Analysis
+            </TabsTrigger>
+            <TabsTrigger value="sales-managers" className="flex items-center gap-2">
+              <UserCheck className="h-4 w-4" />
+              Sales Managers Performance
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="call-analysis" className="space-y-6 mt-6">
+
         <div className="grid gap-6 lg:grid-cols-[320px,1fr]">
           <div className="space-y-6">
             <Card className="lg:sticky lg:top-8">
@@ -1677,7 +1694,7 @@ export default function TestScoringPage() {
                       <Button
                         variant="outline"
                         onClick={() => activeSessionId && handleRunTranscription(activeSessionId)}
-                        disabled={!activeSessionId || !activeSession?.audioFile || activeSession?.transcriptData || activeSession?.isTranscribing}
+                        disabled={!activeSessionId || !activeSession?.audioFile || !!activeSession?.transcriptData || activeSession?.isTranscribing}
                         className="gap-2"
                       >
                         {activeSession?.isTranscribing ? (
@@ -1923,6 +1940,13 @@ export default function TestScoringPage() {
           onExport={handleExport}
           onReset={handleReset}
         />
+        </TabsContent>
+
+        <TabsContent value="sales-managers" className="space-y-6 mt-6">
+          <ManagerPerformance />
+        </TabsContent>
+
+        </Tabs>
       </div>
     </div>
   )
