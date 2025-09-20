@@ -13,6 +13,8 @@ from .api.transcription import router as transcription_router
 from .api.summarization import router as summarization_router
 from .api.analysis import router as analysis_router
 from .api.manager_scorecards import router as manager_scorecards_router
+from .api.jira import router as jira_router
+from .jira_service import cleanup_jira_service
 from .whisper_service import WhisperService
 from .summarization_service import SummarizationServiceError, summarization_service
 from .rabbitmq import (
@@ -94,6 +96,7 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down Speech Recognition Service...")
     await rabbitmq_manager.close()
     await summarization_service.close()
+    await cleanup_jira_service()
 
 
 # Create FastAPI app
@@ -120,6 +123,10 @@ app.include_router(transcription_router)
 app.include_router(summarization_router)
 app.include_router(analysis_router)
 app.include_router(manager_scorecards_router)
+app.include_router(jira_router, prefix="/api/v1")
+
+# MCP server is available as a separate service
+# Run it with: mcp run app.mcp_jira_server:server
 
 
 @app.exception_handler(HTTPException)
@@ -189,7 +196,10 @@ async def info():
             "8kHz and 16kHz sample rate support",
             "Word-level timestamps",
             "Language detection",
-            "Translation support"
+            "Translation support",
+            "Call summary analysis",
+            "Jira ticket creation from recommendations",
+            "MCP (Model Context Protocol) integration"
         ],
         "supported_formats": [".mp3", ".wav", ".m4a", ".flac", ".ogg", ".aac", ".wma"],
         "supported_sample_rates": [8000, 16000, 22050, 44100, 48000],
@@ -198,7 +208,22 @@ async def info():
             "transcribe": "/api/v1/transcribe",
             "transcribe_batch": "/api/v1/transcribe/batch",
             "transcribe_url": "/api/v1/transcribe/url",
-            "model_info": "/api/v1/model/info"
+            "model_info": "/api/v1/model/info",
+            "jira_health": "/api/v1/jira/health",
+            "create_jira_ticket": "/api/v1/jira/create-ticket",
+            "create_tickets_from_summary": "/api/v1/jira/create-tickets-from-summary"
+        },
+        "mcp_server": {
+            "available": True,
+            "run_command": "mcp run app.mcp_jira_server:server",
+            "tools": [
+                "check_jira_health",
+                "create_jira_ticket", 
+                "create_tickets_from_call_summary",
+                "analyze_call_recommendations",
+                "get_jira_config",
+                "generate_sample_call_summary"
+            ]
         }
     }
 

@@ -24,7 +24,7 @@ class Settings(BaseSettings):
 
     # Summarization settings
     ollama_base_url: str = "http://localhost:11434"
-    summarization_model: str = "gemma3:27b"
+    summarization_model: str = "gemma3:4b"
     summarization_temperature: float = 0.3
     summarization_top_p: float = 0.9
     summarization_max_tokens: int = 8192
@@ -157,6 +157,15 @@ class Settings(BaseSettings):
     default_min_word_duration: float = 0.1
     default_repetition_penalty: float = 1.0
     default_no_repeat_ngram_size: int = 0
+    
+    # Jira integration settings
+    jira_base_url: Optional[str] = None
+    jira_username: Optional[str] = None
+    jira_api_token: Optional[str] = None
+    jira_project_key: str = "SALES"
+    jira_default_issue_type: str = "Task"
+    jira_default_priority: str = "Medium"
+    jira_enabled: bool = False
     
     class Config:
         env_file = ".env"

@@ -92,3 +92,10 @@ class ConfigurationError(SpeechRecognitionError):
     
     def __init__(self, message: str, config_key: Optional[str] = None):
         super().__init__(message, "CONFIGURATION_ERROR", {"config_key": config_key})
+
+
+class JiraIntegrationError(SpeechRecognitionError):
+    """Exception raised during Jira integration operations."""
+    
+    def __init__(self, message: str, ticket_data: Optional[Dict[str, Any]] = None):
+        super().__init__(message, "JIRA_INTEGRATION_ERROR", {"ticket_data": ticket_data})
